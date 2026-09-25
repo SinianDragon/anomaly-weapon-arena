@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6c968f6e24c54ae3a0351410502819b, type: 3}
+  m_Name: KnifeHook
+  m_EditorClassIdentifier: Assembly-CSharp::AnomalyArena.KnifeHookEffect
+  id: 4
+  type: 1
+  displayName: Hook
+  description: Hooks the first enemy in line and holds it as a shield. Left-click
+    to throw it.
+  cooldown: 0.2
+  range: 10
+  extendSpeed: 40
+  retractSpeed: 60
+  pullSpeed: 25
+  dragSpeedMultiplier: 0.6
+  throwDistance: 8
+  hookRadius: 0.15
