@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AnomalyArena.GunReverseShotEffect
   id: 2
   type: 0
-  displayName: Reverse Shot
-  description: The bullet flies out behind you. The recoil pushes you forward 3.
+  displayName: "\u53CD\u5411\u5C04\u51FB"
+  description: "\u5B50\u5F39\u4ECE\u4F60\u80CC\u540E\u5C04\u51FA\uFF1B\u540E\u5750\u529B\u628A\u4F60\u5F80\u524D\u63A8
+    3 \u683C\u2014\u2014\u522B\u9762\u671D\u7F3A\u53E3\u5F00\u67AA"
   cooldown: 0.3
   damage: 10
   bulletSpeed: 25

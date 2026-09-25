@@ -66,18 +66,18 @@ namespace AnomalyArena.EditorTools
             var noFriction = NoFriction();
 
             // ───── 效果数值资源（已存在则保留数值） ─────
-            var swing = Effect<GunSwingEffect>("GunSwing", EffectId.GunSwing, WeaponType.Gun, "Swing", 0.35f,
-                "Swings the gun like a club: 90° arc in front, knocks enemies back 5.");
-            var reverse = Effect<GunReverseShotEffect>("GunReverseShot", EffectId.GunReverseShot, WeaponType.Gun, "Reverse Shot", 0.3f,
-                "The bullet flies out behind you. The recoil pushes you forward 3.");
-            var knifeThrow = Effect<KnifeThrowEffect>("KnifeThrow", EffectId.KnifeThrow, WeaponType.Knife, "Throw", 0.3f,
-                "Flies straight 12. On a kill it drags the corpse back to where you stood. Move!");
-            var hook = Effect<KnifeHookEffect>("KnifeHook", EffectId.KnifeHook, WeaponType.Knife, "Hook", 0.2f,
-                "Hooks the first enemy in line and holds it as a shield. Left-click to throw it.");
-            var homing = Effect<MissileHomingEffect>("MissileHoming", EffectId.MissileHoming, WeaponType.Missile, "Homing", 0.5f,
-                "Launches in a random direction. After 1 s it comes for you. The blast hits everyone.");
-            var self = Effect<MissileSelfLaunchEffect>("MissileSelfLaunch", EffectId.MissileSelfLaunch, WeaponType.Missile, "Self-Launch", 0.3f,
-                "Launches YOU 15: kills whatever you hit, bounces off walls. Mind the gaps.");
+            var swing = Effect<GunSwingEffect>("GunSwing", EffectId.GunSwing, WeaponType.Gun, "挥砍", 0.35f,
+                "把枪当棍子挥：前方 90° 扇形，扣 5 血并把敌人撞飞 5 格");
+            var reverse = Effect<GunReverseShotEffect>("GunReverseShot", EffectId.GunReverseShot, WeaponType.Gun, "反向射击", 0.3f,
+                "子弹从你背后射出；后坐力把你往前推 3 格——别面朝缺口开枪");
+            var knifeThrow = Effect<KnifeThrowEffect>("KnifeThrow", EffectId.KnifeThrow, WeaponType.Knife, "飞刀", 0.3f,
+                "直线飞 12 格。打死敌人会带着尸体飞回你出手时站的位置，快躲开");
+            var hook = Effect<KnifeHookEffect>("KnifeHook", EffectId.KnifeHook, WeaponType.Knife, "钩子", 0.2f,
+                "钩住路上第一个敌人拉到身前当掩体；再按左键把它扔出去");
+            var homing = Effect<MissileHomingEffect>("MissileHoming", EffectId.MissileHoming, WeaponType.Missile, "追踪", 0.5f,
+                "先朝随机方向飞，1 秒后随机锁定一个目标（更容易锁你）；爆炸会伤到所有人");
+            var self = Effect<MissileSelfLaunchEffect>("MissileSelfLaunch", EffectId.MissileSelfLaunch, WeaponType.Missile, "发射自己", 0.3f,
+                "把你自己当导弹冲出 15 格：撞死敌人、撞墙反弹，路上有缺口就会冲下去");
 
             // ───── 预制体 ─────
             var playerGo = BuildCharacter("Player", 0.5f, 2f, 1f, mPlayer, mFacing, noFriction, charLayer, out var pBody, out var pHand);
@@ -148,6 +148,7 @@ namespace AnomalyArena.EditorTools
             gm.litMaterial = mLit;
             gm.fxMaterial = mFx;
             gm.spawnMarkerMaterial = mSpawnX;
+            gm.uiFont = AssetDatabase.LoadAssetAtPath<Font>(Root + "/Fonts/UIFont.ttf");
 
             waves.smallPrefab = smallPrefab;
             waves.largePrefab = largePrefab;
@@ -160,9 +161,11 @@ namespace AnomalyArena.EditorTools
             };
 
             EditorSceneManager.SaveScene(scene, ScenePath);
+            // 重新打开刚保存的场景：否则内存里的场景仍指向覆盖前的旧预制体，直接点播放会报引用丢失
+            EditorSceneManager.OpenScene(ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
-            PlayerSettings.productName = "Anomaly Weapon Arena";
+            PlayerSettings.productName = "反常武器竞技场";
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true; // GitHub Pages 不返回 Content-Encoding
             PlayerSettings.defaultWebScreenWidth = 1280;
@@ -388,7 +391,7 @@ namespace AnomalyArena.EditorTools
             e.id = id;
             e.type = type;
             e.displayName = displayName;
-            if (string.IsNullOrEmpty(e.description)) e.description = desc;
+            e.description = desc;
             EditorUtility.SetDirty(e);
             return e;
         }

@@ -41,6 +41,9 @@ namespace AnomalyArena
         [Tooltip("半透明提示用的材质（URP Unlit 透明）")] public Material fxMaterial;
         public Material spawnMarkerMaterial;
 
+        [Header("UI")]
+        [Tooltip("界面字体：思源黑体（SIL OFL）按游戏用到的字裁剪的子集")] public Font uiFont;
+
         public GameState State { get; private set; } = GameState.Title;
         public DeathCause LoseCause { get; private set; }
         public float Elapsed { get; private set; }

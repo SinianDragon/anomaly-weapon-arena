@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AnomalyArena.MissileSelfLaunchEffect
   id: 6
   type: 2
-  displayName: Self-Launch
-  description: 'Launches YOU 15: kills whatever you hit, bounces off walls. Mind
-    the gaps.'
+  displayName: "\u53D1\u5C04\u81EA\u5DF1"
+  description: "\u628A\u4F60\u81EA\u5DF1\u5F53\u5BFC\u5F39\u51B2\u51FA 15 \u683C\uFF1A\u649E\u6B7B\u654C\u4EBA\u3001\u649E\u5899\u53CD\u5F39\uFF0C\u8DEF\u4E0A\u6709\u7F3A\u53E3\u5C31\u4F1A\u51B2\u4E0B\u53BB"
   cooldown: 0.3
   distance: 15
   speed: 25

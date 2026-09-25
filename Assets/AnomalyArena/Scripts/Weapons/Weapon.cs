@@ -35,9 +35,17 @@ namespace AnomalyArena
 
         float phase;
 
-        public static string TypeName(WeaponType t) => t.ToString();
+        public static string TypeName(WeaponType t)
+        {
+            switch (t)
+            {
+                case WeaponType.Gun: return "枪";
+                case WeaponType.Knife: return "刀";
+                default: return "导弹";
+            }
+        }
 
-        /// <summary>地上与界面显示的名字：“Gun ?” 或 “Gun · Reverse Shot”。</summary>
+        /// <summary>地上与界面显示的名字：“枪 ?” 或 “枪 · 反向射击”。</summary>
         public string Label => Revealed && effect ? $"{TypeName(type)} · {effect.displayName}" : $"{TypeName(type)} ?";
 
         public void Init(WeaponEffect e, int uses)

@@ -286,6 +286,11 @@ MonoBehaviour:
   protectionTime: 0.5
   bodyRenderer: {fileID: 55925798639710478}
   hand: {fileID: 2906353207115331401}
+  punchDamage: 3
+  punchRange: 1.2
+  punchArc: 90
+  punchKnockback: 3
+  punchCooldown: 0.4
 --- !u!1 &7876702360261151860
 GameObject:
   m_ObjectHideFlags: 0

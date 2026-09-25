@@ -3,8 +3,8 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 追踪导弹：先朝随机方向直飞；lockDelay 秒后锁定发射者，以有限转向速度追过去。
-    /// 路上碰到任何人或墙就爆炸；到寿命原地爆炸。爆炸伤到范围内所有人。
+    /// 追踪导弹：先朝随机方向直飞；lockDelay 秒后按权重随机锁定场上任意目标（玩家权重 3，敌人各 1），
+    /// 以有限转向速度追过去；目标没了就重新抽。路上碰到任何人或墙就爆炸；到寿命原地爆炸。爆炸伤到范围内所有人。
     /// </summary>
     public class HomingMissile : Projectile
     {
@@ -12,6 +12,7 @@ namespace AnomalyArena
         Vector3 pos, dir;
         float t;
         bool locked;
+        Combatant target;
         Renderer body;
 
         public void Launch(MissileHomingEffect e, IWeaponHolder owner, Vector3 start, Vector3 direction)
@@ -31,15 +32,10 @@ namespace AnomalyArena
         {
             float dt = Time.fixedDeltaTime;
             t += dt;
-            var owner = Owner as Combatant;
-            if (t >= cfg.lockDelay && owner != null && owner.IsAlive)
+            if (t >= cfg.lockDelay)
             {
-                if (!locked)
-                {
-                    locked = true;
-                    body.sharedMaterial = GameManager.Instance.Mat(new Color(1f, 0.15f, 0.15f));
-                }
-                dir = Query.Steer(dir, owner.Position - pos, cfg.turnRate * dt);
+                if (target == null || !target.IsAlive) PickTarget();
+                if (target != null) dir = Query.Steer(dir, target.Position - pos, cfg.turnRate * dt);
             }
 
             Vector3 next = pos + dir * (cfg.speed * dt);
@@ -65,6 +61,36 @@ namespace AnomalyArena
             }
             UpdateTransform();
         }
+
+        /// <summary>按权重在所有活着的角色里随机抽一个目标。</summary>
+        void PickTarget()
+        {
+            var gm = GameManager.Instance;
+            var candidates = new System.Collections.Generic.List<Combatant>();
+            if (gm.player != null && gm.player.IsAlive) candidates.Add(gm.player);
+            foreach (var e in gm.waves.Alive) if (e != null && e.IsAlive) candidates.Add(e);
+            float total = 0f;
+            foreach (var c in candidates) total += Weight(c);
+            target = null;
+            if (total <= 0f) return;
+            float r = Random.value * total;
+            foreach (var c in candidates)
+            {
+                r -= Weight(c);
+                if (r > 0f) continue;
+                target = c;
+                break;
+            }
+            if (target == null) target = candidates[candidates.Count - 1];
+            if (!locked)
+            {
+                locked = true;
+                body.sharedMaterial = gm.Mat(new Color(1f, 0.15f, 0.15f));
+            }
+            if (target == gm.player) gm.hud.Toast("导弹锁定了你！", new Color(1f, 0.5f, 0.45f));
+        }
+
+        float Weight(Combatant c) => c.Team == Team.Player ? cfg.playerWeight : cfg.enemyWeight;
 
         void Explode()
         {

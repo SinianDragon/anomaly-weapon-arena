@@ -25,6 +25,8 @@ namespace AnomalyArena
         public int perWave = 2;
         [Tooltip("地上最多同时有几把；满了就不再补")] public int groundCap = 5;
         public float pickupRadius = 1f;
+        [Tooltip("击败大型敌人时掉落一把随机武器的概率")] [Range(0f, 1f)] public float largeDropChance = 0.5f;
+        [Tooltip("大型敌人的掉落不受地上武器上限限制")] public bool dropIgnoresCap = true;
 
         public readonly List<Weapon> ground = new List<Weapon>();
 
@@ -37,6 +39,19 @@ namespace AnomalyArena
                 var def = defs[Random.Range(0, defs.Length)];
                 Spawn(def, RandomPosition());
             }
+        }
+
+        /// <summary>大型敌人被击败时按概率掉落任意类型的武器（效果照常随机）。</summary>
+        public void TryLargeDrop(Vector3 pos)
+        {
+            if (Random.value >= largeDropChance) return;
+            if (!dropIgnoresCap && ground.Count >= groundCap) return;
+            float limit = GameManager.Instance.rules.arenaHalfSize - 1.5f;
+            pos.x = Mathf.Clamp(pos.x, -limit, limit);
+            pos.z = Mathf.Clamp(pos.z, -limit, limit);
+            var w = Spawn(defs[Random.Range(0, defs.Length)], pos);
+            Fx.Pop(pos + Vector3.up * 0.6f, new Color(0.85f, 0.65f, 0.15f), 2f);
+            GameManager.Instance.hud.Toast("大型敌人掉落了：" + w.Label, new Color(1f, 0.85f, 0.4f));
         }
 
         public Weapon Spawn(WeaponDef def, Vector3 pos)

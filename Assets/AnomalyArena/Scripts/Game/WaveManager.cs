@@ -30,7 +30,8 @@ namespace AnomalyArena
         public float minSpawnDistance = 6f;
         [Tooltip("连续出 X 的间隔")] public float spawnInterval = 0.25f;
         public float betweenWaveDelay = 2.5f;
-        [Tooltip("波间回血，不超过上限（待定）")] public float waveHeal = 20f;
+        [Tooltip("每波开始前把玩家血量回满")] public bool refillHpEachWave = true;
+        [Tooltip("不回满时，波间回多少血（不超过上限）")] public float waveHeal = 20f;
 
         public Enemy smallPrefab;
         public Enemy largePrefab;
@@ -41,6 +42,7 @@ namespace AnomalyArena
         public float BetweenTimer { get; private set; }
         public int Remaining => queue.Count + markers.Count + alive.Count;
         public IReadOnlyList<Enemy> Alive => alive;
+        public int Kills { get; private set; }
 
         readonly List<bool> queue = new List<bool>(); // true = 大型
         readonly List<SpawnMarker> markers = new List<SpawnMarker>();
@@ -69,7 +71,7 @@ namespace AnomalyArena
                 (queue[k], queue[j]) = (queue[j], queue[k]);
             }
             spawnTimer = 0.5f;
-            GM.hud.Banner($"Wave {i + 1}", i == waves.Length - 1 ? "Final wave!" : $"{queue.Count} enemies");
+            GM.hud.Banner($"第 {i + 1} 波", i == waves.Length - 1 ? "最后一波！" : $"共 {queue.Count} 名敌人");
         }
 
         void Update()
@@ -123,7 +125,13 @@ namespace AnomalyArena
             }
         }
 
-        void OnEnemyEliminated(Combatant c) => alive.Remove(c as Enemy);
+        void OnEnemyEliminated(Combatant c)
+        {
+            var e = c as Enemy;
+            alive.Remove(e);
+            Kills++;
+            if (e != null && e.IsLarge) GM.weapons.TryLargeDrop(e.Position);
+        }
 
         void OnWaveCleared()
         {
@@ -133,13 +141,13 @@ namespace AnomalyArena
                 GM.NotifyFinalWaveCleared();
                 return;
             }
-            GM.ClearTransients();
+            // 切波不重置场上状态：飞行中的子弹 / 飞刀 / 导弹、钩子、冲刺都继续，玩家照常移动
             float before = GM.player.Hp;
-            GM.player.Heal(waveHeal);
+            GM.player.Heal(refillHpEachWave ? GM.player.maxHp : waveHeal);
             GM.weapons.SpawnRandom(GM.weapons.perWave);
             BetweenWaves = true;
             BetweenTimer = betweenWaveDelay;
-            GM.hud.Banner($"Wave {WaveIndex + 1} cleared", $"+{Mathf.RoundToInt(GM.player.Hp - before)} HP");
+            GM.hud.Banner($"第 {WaveIndex + 1} 波 清除！", refillHpEachWave ? "生命已回满" : $"生命 +{Mathf.RoundToInt(GM.player.Hp - before)}");
         }
 
         Vector3 FindSpawnPoint(bool large)

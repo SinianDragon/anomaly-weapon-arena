@@ -25,7 +25,8 @@
 | `Scripts/Weapons/Effects/` | 六个效果脚本，每种一个文件 |
 | `Scripts/Weapons/Runtime/` | 子弹、飞刀、导弹、钩子、冲刺的运行逻辑 |
 | `Scripts/Weapons/WeaponSpawner.cs` | 开局 3 把、每波后补 2 把、上限 5、效果概率、强制效果 |
-| `Scripts/Game/` | GameManager（胜负、R 重开、统一清理）、WaveManager（波次、上限、红 X）、Hud、最低限度的反馈 |
+| `Scripts/Game/` | GameManager（胜负、R 重开、统一清理）、WaveManager（波次、上限、红 X）、Hud（中文界面）、最低限度的反馈 |
+| `Fonts/UIFont.ttf` | 思源黑体（SIL OFL）按游戏用到的字裁剪的子集 |
 
 ## 状态机
 
@@ -42,6 +43,30 @@
 - **强制效果**：运行时选中地上某把武器，把 `Debug Force Effect` 改掉（揭晓前生效）；或者在 WeaponSpawner 的 `Force On Spawn` 里让新生成的同类武器都用这个效果。
 - 自动化测试用：`PlayerController.DebugSetAim(dir)` 锁定瞄准方向（运行时默认不开）。
 
+## v0.6 之后的改动
+
+- **导弹 · 追踪**：随机方向射出，1 秒后按权重随机锁定场上任意目标（玩家权重 3，每个敌人 1，在 `MissileHoming.asset` 里调）；目标没了就重新抽。
+- **空手出拳**：左键出拳，伤害 3，击退 3 格（PlayerController 的 Punch 参数）。
+- **大型敌人掉落**：被击败（打死或掉进缺口）时 50% 掉一把随机武器，不受地上 5 把的上限限制（WeaponSpawner）。
+- **切波**：每波开始前玩家血量回满（WaveManager 的 `Refill Hp Each Wave`）；飞行中的子弹 / 飞刀 / 导弹、钩子、冲刺都不清掉，玩家照常移动。
+- **界面**：换回上个版本的中文界面和思源黑体子集字体。注意这属于外部素材，规格写的是“只用 Unity 自带字体”，交作业前请和助教确认。
+
+## 修改文字后要重新生成字体
+
+字体只包含代码里用到的字，新增中文后要重新裁剪，否则新字显示成方块：
+
+```bash
+pip install fonttools
+python3 - <<'PY' > chars.txt
+import glob,string
+s=set(string.printable)
+for f in glob.glob('Assets/AnomalyArena/Scripts/**/*.cs',recursive=True)+glob.glob('Assets/AnomalyArena/Editor/*.cs'):
+    s|=set(open(f,encoding='utf-8').read())
+print(''.join(sorted(c for c in s if c not in '\r\n\t')))
+PY
+pyftsubset SourceHanSansCN-Medium.ttf --text-file=chars.txt --output-file=Assets/AnomalyArena/Fonts/UIFont.ttf
+```
+
 ## 已验证
 
 规格第 13 节 1–11 条都在编辑器里用脚本逐条跑过，结果与规格一致。第 12 条需要在浏览器里打开发布链接确认。
@@ -52,11 +77,11 @@
 |---|---|
 | 玩家移动速度 | 6 格/秒（小型敌人 5.4，大型 3.6） |
 | 导弹随机方向 | 完全 360° 随机；`MissileHoming.asset` 的 `Random Spread Degrees` 可改成瞄准方向左右一定角度 |
-| “敌人死亡时清掉飞行物” | 理解为清掉跟这个敌人有关的状态（被钩住的敌人死了钩子就结束）；切波和玩家死亡时清掉全部 |
+| 清掉飞行物 | 只在玩家死亡或胜利时清；切波不清（按新要求） |
 | 反向射击的后坐力撞墙 | 算“推开”，不扣墙伤 |
 | 钩子把大型敌人扔出去 | 也是 8 格（体型系数只影响“被撞飞”） |
 | 保护期间挨打 | 伤害和撞飞一起无效 |
 | 敌人自己走路 | 不会主动走下缺口，只有被撞飞 / 被扔才会掉 |
 | 开局 | 有一个“点击开始”的标题画面（网页里需要先点一下获得焦点）；按 R 重开跳过它，直接从第 1 波开始 |
-| 界面语言 | 英文，只用 Unity 自带字体（中文在网页版里显示不了） |
-| 补给 | 只有开局 3 把 + 每波后 2 把，上限 5，没有定时补给（按规格） |
+| 界面语言 | 中文，思源黑体子集（见上） |
+| 补给 | 开局 3 把 + 每波后 2 把（上限 5）+ 大型敌人 50% 掉落；没有定时补给 |

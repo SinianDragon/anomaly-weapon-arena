@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AnomalyArena.KnifeHookEffect
   id: 4
   type: 1
-  displayName: Hook
-  description: Hooks the first enemy in line and holds it as a shield. Left-click
-    to throw it.
+  displayName: "\u94A9\u5B50"
+  description: "\u94A9\u4F4F\u8DEF\u4E0A\u7B2C\u4E00\u4E2A\u654C\u4EBA\u62C9\u5230\u8EAB\u524D\u5F53\u63A9\u4F53\uFF1B\u518D\u6309\u5DE6\u952E\u628A\u5B83\u6254\u51FA\u53BB"
   cooldown: 0.2
   range: 10
   extendSpeed: 40
