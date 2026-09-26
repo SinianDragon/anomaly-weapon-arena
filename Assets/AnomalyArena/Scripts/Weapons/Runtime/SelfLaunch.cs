@@ -24,9 +24,10 @@ namespace AnomalyArena
             remaining = cfg.distance;
             u.SetState(CharacterState.Dashing);
             // 美术版：玩家身后拖一团导弹尾焰（挂在这个流程物体上，流程结束一起销毁）
-            if (Art.On && Art.Set.flame)
+            var flameTex = Art.On ? (Art.Set.rocketFlame ? Art.Set.rocketFlame : Art.Set.flame) : null;
+            if (flameTex)
             {
-                flame = Art.Flat(transform, Art.Set.flame, 1.6f, Art.OrderProjectile, out _);
+                flame = Art.Flat(transform, flameTex, 2.2f, Art.OrderProjectile, out _);
                 PlaceFlame(u.Position);
             }
         }

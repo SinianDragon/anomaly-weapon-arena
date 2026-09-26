@@ -34,18 +34,86 @@ namespace AnomalyArena
             }
         }
 
-        static Fade Make(GameObject go, Color c, float life)
+        static Fade Make(GameObject go, Color c, float life, Texture tex = null)
         {
             var r = go.GetComponent<Renderer>();
             r.shadowCastingMode = ShadowCastingMode.Off;
             r.receiveShadows = false;
             var m = GameManager.Instance.FxMat(c);
+            if (tex) m.SetTexture("_BaseMap", tex);
             r.sharedMaterial = m;
+            r.sortingOrder = Art.OrderProjectile;
             var f = go.AddComponent<Fade>();
             f.life = life;
             f.mat = m;
             f.color = c;
             return f;
+        }
+
+        // ───── 美术版：带贴图的一次性特效 ─────
+
+        /// <summary>朝向镜头的贴图（命中星光、尘土），从 startSize 长到 endSize 并淡出。size 是高度。</summary>
+        public static void SpriteBillboard(Texture tex, Vector3 pos, float startSize, float endSize, float life)
+        {
+            var go = Prim(PrimitiveType.Quad, pos, Vector3.one * startSize);
+            var cam = GameManager.Instance.cam;
+            if (cam) go.transform.rotation = cam.transform.rotation;
+            float aspect = Art.Aspect(tex);
+            var f = Make(go, Color.white, life, tex);
+            f.update = (t, k) =>
+            {
+                float s = Mathf.Lerp(startSize, endSize, Mathf.Sqrt(k));
+                t.localScale = new Vector3(s * aspect, s, 1f);
+            };
+        }
+
+        /// <summary>平躺在地上、贴图右边指向 forward 的贴图（挥拳弧光），长度从 length 长到 length × grow 并淡出。</summary>
+        public static void SpriteFlat(Texture tex, Vector3 pos, Vector3 forward, float length, float life,
+            float grow = 1.2f)
+        {
+            var go = Prim(PrimitiveType.Quad, pos, Vector3.one);
+            // 同 Art.Flat：先躺平，再让贴图的右边指向前方
+            go.transform.rotation = Quaternion.LookRotation(Query.Flat(forward)) *
+                                    Quaternion.Euler(0f, -90f, 0f) * Quaternion.Euler(90f, 0f, 0f);
+            float aspect = Art.Aspect(tex);
+            var f = Make(go, Color.white, life, tex);
+            f.update = (t, k) =>
+            {
+                float l = length * Mathf.Lerp(1f, grow, Mathf.Sqrt(k));
+                t.localScale = new Vector3(l, l / aspect, 1f);
+            };
+        }
+
+        /// <summary>贴地的圆形贴图（爆炸范围圈），直径从 0 扩散到 2 × radius 并淡出。</summary>
+        public static void SpriteRing(Texture tex, Vector3 pos, float radius, float life)
+        {
+            var go = Prim(PrimitiveType.Quad, new Vector3(pos.x, 0.06f, pos.z), Vector3.one * 0.1f);
+            go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            var f = Make(go, Color.white, life, tex);
+            f.update = (t, k) =>
+            {
+                float d = Mathf.Lerp(0.2f, radius * 2f, Mathf.Sqrt(Mathf.Min(1f, k * 1.6f)));
+                t.localScale = new Vector3(d, d, 1f);
+            };
+        }
+
+        /// <summary>朝向镜头、按顺序播放的帧动画（爆炸），整段 life 秒，最后一帧淡出。</summary>
+        public static void Flipbook(System.Collections.Generic.IReadOnlyList<Texture> frames, Vector3 pos, float size,
+            float life)
+        {
+            if (frames == null || frames.Count == 0) return;
+            var go = Prim(PrimitiveType.Quad, pos, Vector3.one * size);
+            var cam = GameManager.Instance.cam;
+            if (cam) go.transform.rotation = cam.transform.rotation;
+            var f = Make(go, Color.white, life, frames[0]);
+            var mat = f.mat;
+            f.update = (t, k) =>
+            {
+                var tex = frames[Mathf.Min(frames.Count - 1, (int)(k * frames.Count))];
+                mat.SetTexture("_BaseMap", tex);
+                float s = size * Mathf.Lerp(0.7f, 1.15f, k);
+                t.localScale = new Vector3(s * Art.Aspect(tex), s, 1f);
+            };
         }
 
         static GameObject Prim(PrimitiveType t, Vector3 pos, Vector3 scale)
@@ -140,11 +208,13 @@ namespace AnomalyArena
                 float a = Mathf.Deg2Rad * Mathf.Lerp(-arcDeg * 0.5f, arcDeg * 0.5f, i / (float)seg);
                 verts[i + 1] = new Vector3(Mathf.Sin(a) * radius, 0f, Mathf.Cos(a) * radius);
             }
+
             for (int i = 0; i < seg; i++)
             {
                 tris[i * 3 + 1] = i + 1;
                 tris[i * 3 + 2] = i + 2;
             }
+
             mesh.Clear();
             mesh.vertices = verts;
             mesh.triangles = tris;

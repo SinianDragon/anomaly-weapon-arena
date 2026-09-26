@@ -16,6 +16,14 @@ namespace AnomalyArena
             m.large = large;
             m.timer = delay;
             m.size = large ? 2.4f : 1.2f; // 大型敌人是小型的两倍
+            var xTex = Art.On ? (large ? Art.Set.spawnXLarge : Art.Set.spawnXSmall) : null;
+            if (xTex)
+            {
+                // 美术版：贴地的红 X 贴图（和两根方块交叉的白盒 X 一样大）
+                Art.Ground(go.transform, xTex, m.size * 1.2f, Art.OrderGround);
+                m.MoveTo(pos);
+                return m;
+            }
             for (int i = 0; i < 2; i++)
             {
                 var bar = GameObject.CreatePrimitive(PrimitiveType.Cube);

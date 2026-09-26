@@ -82,7 +82,10 @@ namespace AnomalyArena
             dustTimer -= Time.deltaTime;
             if (dustTimer > 0f) return;
             dustTimer = SprintDustInterval;
-            Fx.Pop(new Vector3(Position.x, 0.2f, Position.z), new Color(0.85f, 0.85f, 0.8f), 0.9f);
+            var feet = new Vector3(Position.x, 0.2f, Position.z);
+            var dust = Art.On ? Art.Set.dust : null;
+            if (dust) Fx.SpriteBillboard(dust, feet, 0.4f, 1.1f, 0.4f);
+            else Fx.Pop(feet, new Color(0.85f, 0.85f, 0.8f), 0.9f);
         }
 
         void UpdateAim()

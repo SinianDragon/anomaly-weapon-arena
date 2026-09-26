@@ -122,7 +122,18 @@ namespace AnomalyArena
 
         void Explode()
         {
-            Fx.Explosion(pos, cfg.explosionRadius);
+            var art = Art.On ? Art.Set : null;
+            if (art && art.explosionFrames != null && art.explosionFrames.Length > 0)
+            {
+                // 美术版：火球动画 + 扩散到真实爆炸半径的地面圆圈，看得出这一炸会不会波及自己
+                Fx.Flipbook(art.explosionFrames, pos + Vector3.up * 0.5f, cfg.explosionRadius * 1.5f, 0.35f);
+                if (art.explosionRing) Fx.SpriteRing(art.explosionRing, pos, cfg.explosionRadius, 0.45f);
+            }
+            else
+            {
+                Fx.Explosion(pos, cfg.explosionRadius);
+            }
+
             foreach (var c in Query.Characters(pos, cfg.explosionRadius))
             {
                 if (!c.IsAlive) continue;

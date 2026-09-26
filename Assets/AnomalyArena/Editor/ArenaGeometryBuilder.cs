@@ -14,7 +14,9 @@ namespace AnomalyArena.EditorTools
         const string MeshPath = "Assets/AnomalyArena/Scenes/ArenaGeometry.asset";
         const float WallThick = 1f;
         const float WallHeight = 1.5f;
+
         const float FloorDepth = 1f;
+
         // FallZone 从缺口边线外 1 格开始、深 4 格：避免卡在小缺口上的大型敌人被误判。
         // Art.DecorateArena 依赖“FallZone 中心 = 缺口中点向外 1 + 4 / 2 = 3 格”
         const float ZoneOffset = 1f, ZoneDepth = 4f;
@@ -31,7 +33,8 @@ namespace AnomalyArena.EditorTools
             Debug.Log($"[AnomalyArena] Arena rebuilt: {ArenaShape.EdgeCount} edges, {ArenaShape.Gaps.Length} gaps.");
         }
 
-        static Material Mat(string name) => AssetDatabase.LoadAssetAtPath<Material>($"Assets/AnomalyArena/Materials/{name}.mat");
+        static Material Mat(string name) =>
+            AssetDatabase.LoadAssetAtPath<Material>($"Assets/AnomalyArena/Materials/{name}.mat");
 
         public static GameObject Build(Material floorMat, Material wallMat, Material gapEdgeMat, int wallLayer)
         {
@@ -83,6 +86,7 @@ namespace AnomalyArena.EditorTools
                 Vector3 down = Vector3.down * FloorDepth;
                 b.Quad(a, c, c + down, a + down, ArenaShape.ToWorld(ArenaShape.EdgeOutward(e)));
             }
+
             var mesh = b.ToMesh();
             mesh.name = "ArenaFloor";
             return mesh;
@@ -109,12 +113,14 @@ namespace AnomalyArena.EditorTools
                         contains = true;
                         break;
                     }
+
                     if (contains) continue;
                     tris.Add((a, b, c));
                     idx.RemoveAt(n);
                     break;
                 }
             }
+
             tris.Add((idx[0], idx[1], idx[2]));
             return tris;
         }
@@ -131,7 +137,8 @@ namespace AnomalyArena.EditorTools
         {
             var cuts = new List<(float, float)>();
             foreach (var g in ArenaShape.Gaps)
-                if (g.edge == e) cuts.Add(ArenaShape.GapRange(g));
+                if (g.edge == e)
+                    cuts.Add(ArenaShape.GapRange(g));
             cuts.Sort((x, y) => x.Item1.CompareTo(y.Item1));
             var solid = new List<(float, float)>();
             float cur = 0f, len = ArenaShape.EdgeLength(e);
@@ -140,6 +147,7 @@ namespace AnomalyArena.EditorTools
                 if (from > cur + 0.01f) solid.Add((cur, from));
                 cur = to;
             }
+
             if (len > cur + 0.01f) solid.Add((cur, len));
             return solid;
         }
@@ -182,6 +190,7 @@ namespace AnomalyArena.EditorTools
                 lo[i] = ArenaShape.ToWorld(quad[i]);
                 hi[i] = ArenaShape.ToWorld(quad[i], h);
             }
+
             b.Quad(hi[0], hi[1], hi[2], hi[3], Vector3.up);
             for (int i = 0; i < quad.Length; i++)
             {
@@ -189,6 +198,7 @@ namespace AnomalyArena.EditorTools
                 Vector3 faceCenter = (lo[i] + lo[j] + hi[i] + hi[j]) * 0.25f;
                 b.Quad(lo[i], lo[j], hi[j], hi[i], faceCenter - center);
             }
+
             return b.ToMesh();
         }
 
@@ -236,19 +246,29 @@ namespace AnomalyArena.EditorTools
             return go;
         }
 
-        /// <summary>逐面拼网格：给出期望朝向，自动调整三角形顺序让正面朝那边。UV 用世界 xz（地板贴图按格平铺）。</summary>
+        /// <summary>
+        /// 逐面拼网格：给出期望朝向，自动调整三角形顺序让正面朝那边。
+        /// UV 按世界坐标、每格 1：朝上的面用 xz（地板、墙顶）；竖直的面用“沿着这个面的水平距离, 高度”，
+        /// 否则竖直面上 xz 几乎不变，贴图会被拉成一条条竖纹。
+        /// </summary>
         sealed class MeshBuilder
         {
             readonly List<Vector3> verts = new List<Vector3>();
+            readonly List<Vector2> uvs = new List<Vector2>();
             readonly List<int> tris = new List<int>();
 
             public void Tri(Vector3 a, Vector3 b, Vector3 c, Vector3 facing)
             {
                 if (Vector3.Dot(Vector3.Cross(b - a, c - a), facing) < 0f) (b, c) = (c, b);
+                bool horizontal = Mathf.Abs(facing.normalized.y) > 0.5f;
+                Vector3 tangent = horizontal ? Vector3.right : Vector3.Cross(Vector3.up, facing).normalized;
                 int i = verts.Count;
-                verts.Add(a);
-                verts.Add(b);
-                verts.Add(c);
+                foreach (var v in new[] { a, b, c })
+                {
+                    verts.Add(v);
+                    uvs.Add(horizontal ? new Vector2(v.x, v.z) : new Vector2(Vector3.Dot(v, tangent), v.y));
+                }
+
                 tris.Add(i);
                 tris.Add(i + 1);
                 tris.Add(i + 2);
@@ -262,9 +282,7 @@ namespace AnomalyArena.EditorTools
 
             public Mesh ToMesh()
             {
-                var uv = new Vector2[verts.Count];
-                for (int i = 0; i < verts.Count; i++) uv[i] = new Vector2(verts[i].x, verts[i].z);
-                var mesh = new Mesh { vertices = verts.ToArray(), triangles = tris.ToArray(), uv = uv };
+                var mesh = new Mesh { vertices = verts.ToArray(), triangles = tris.ToArray(), uv = uvs.ToArray() };
                 mesh.RecalculateNormals();
                 mesh.RecalculateBounds();
                 return mesh;
