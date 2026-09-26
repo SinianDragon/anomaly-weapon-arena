@@ -14,7 +14,12 @@ namespace AnomalyArena
     /// </summary>
     public class ThrownKnife : Projectile
     {
-        enum Phase { Outbound, Seeking, Returning }
+        enum Phase
+        {
+            Outbound,
+            Seeking,
+            Returning
+        }
 
         // 碰撞半径：刀身离角色身体边缘多近算打中
         const float HitRadius = 0.35f;
@@ -37,6 +42,7 @@ namespace AnomalyArena
 
         /// <summary>已经打中了几个人（测试和界面用）。</summary>
         public int Hits => hits;
+
         public bool Returning => phase == Phase.Returning;
 
         public void Launch(KnifeThrowEffect e, Weapon w, IWeaponHolder owner, Vector3 start, Vector3 direction)
@@ -59,7 +65,8 @@ namespace AnomalyArena
 
         void Update()
         {
-            if (spinner) spinner.Rotate(0f, (phase == Phase.Returning ? -1f : 1f) * 1080f * Time.deltaTime, 0f, Space.Self);
+            if (spinner)
+                spinner.Rotate(0f, (phase == Phase.Returning ? -1f : 1f) * 1080f * Time.deltaTime, 0f, Space.Self);
         }
 
         void FixedUpdate()
@@ -76,6 +83,7 @@ namespace AnomalyArena
                         StartReturn();
                         break;
                     }
+
                     dir = Query.Flat(seekTarget.Position - pos).normalized;
                     Advance(cfg.speed * dt);
                     break;
@@ -83,6 +91,7 @@ namespace AnomalyArena
                     if (TickReturn(cfg.returnSpeed * dt)) return;
                     break;
             }
+
             UpdateTransform();
         }
 
@@ -96,6 +105,7 @@ namespace AnomalyArena
                 StartReturn();
                 return false;
             }
+
             pos = next;
             traveled += step;
             foreach (var c in Query.Characters(pos, HitRadius))
@@ -104,6 +114,7 @@ namespace AnomalyArena
                 Strike(c);
                 return false;
             }
+
             return true;
         }
 
@@ -131,10 +142,12 @@ namespace AnomalyArena
             {
                 if (!ValidTarget(c)) continue;
                 float d = Query.Flat(c.Position - from).sqrMagnitude;
-                if (d >= best || Query.WallBetween(Query.AtCastHeight(from), Query.AtCastHeight(c.Position), out _)) continue;
+                if (d >= best ||
+                    Query.WallBetween(Query.AtCastHeight(from), Query.AtCastHeight(c.Position), out _)) continue;
                 best = d;
                 seekTarget = c;
             }
+
             if (seekTarget == null) return false;
             phase = Phase.Seeking;
             return true;
@@ -150,6 +163,7 @@ namespace AnomalyArena
                 Destroy(gameObject); // 飞刀（和尸体）到达返回点后消失，这把刀可以再扔
                 return true;
             }
+
             dir = to.normalized;
             pos += dir * step;
             if (corpse == null) return false;
@@ -158,6 +172,7 @@ namespace AnomalyArena
                 if (!c.IsAlive || !hitOnReturn.Add(c)) continue;
                 c.ReceiveDamage(DamageInfo.Attack(corpseDamage, this, dir, cfg.corpseKnockback, HitKind.Slam));
             }
+
             return false;
         }
 
@@ -165,13 +180,16 @@ namespace AnomalyArena
         {
             corpseDamage = damage;
             corpseRadius = r;
-            var enemyTex = Art.On ? (c is Enemy e && e.IsLarge ? Art.Set.enemyLarge : Art.Set.enemySmall) : null;
+            // 美术版优先用“趴着、背上插着刀”的尸体图；没有就用敌人立牌躺平变灰
+            bool large = c is Enemy e && e.IsLarge;
+            var corpseTex = Art.On ? (large ? Art.Set.corpseLarge : Art.Set.corpseSmall) : null;
+            var enemyTex = corpseTex ? corpseTex : Art.On ? (large ? Art.Set.enemyLarge : Art.Set.enemySmall) : null;
             if (enemyTex)
             {
                 // 美术版：敌人贴图躺平、变灰，拖在刀后面
                 corpse = Art.Flat(transform, enemyTex, r * 2.6f, Art.OrderProjectile, out var cr,
                     new Vector3(0f, 0.1f - Query.CastHeight, -r));
-                Art.Tint(cr, new Color(0.55f, 0.5f, 0.5f));
+                if (!corpseTex) Art.Tint(cr, new Color(0.55f, 0.5f, 0.5f));
             }
             else
             {
@@ -179,6 +197,7 @@ namespace AnomalyArena
                     new Color(0.42f, 0.36f, 0.34f), new Vector3(0f, r - Query.CastHeight + 0.1f, -r));
                 corpse.localRotation = Quaternion.Euler(90f, 0f, 0f);
             }
+
             // 被带着的尸体返回途中不会再撞到自己
             hitOnReturn.Add(c);
         }
@@ -196,7 +215,8 @@ namespace AnomalyArena
             lockMarker.name = "KnifeReturnPoint";
             lockMarker.transform.position = new Vector3(lockPoint.x, 0.02f, lockPoint.z);
             lockMarker.transform.localScale = new Vector3(1.4f, 0.01f, 1.4f);
-            lockMarker.GetComponent<Renderer>().sharedMaterial = GameManager.Instance.FxMat(new Color(1f, 0.3f, 0.25f, 0.45f));
+            lockMarker.GetComponent<Renderer>().sharedMaterial =
+                GameManager.Instance.FxMat(new Color(1f, 0.3f, 0.25f, 0.45f));
         }
 
         void UpdateTransform()

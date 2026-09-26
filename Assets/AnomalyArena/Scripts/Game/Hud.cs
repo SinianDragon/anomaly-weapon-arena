@@ -348,6 +348,9 @@ namespace AnomalyArena
             if (Button(art, artLabel, new Color(0.25f, 0.45f, 0.8f, 0.95f), Color.white)) GM.ToggleArt();
             Text(new Rect(0, y + bh + 10 * u, Screen.width, 26 * u),
                 "Space = start      T = switch art (whitebox <-> illustrated)", 15, TextDim, TextAnchor.MiddleCenter);
+            // 右下角版本号（PlayerSettings.bundleVersion）
+            Text(new Rect(0, Screen.height - 30 * u, Screen.width - 16 * u, 24 * u), $"v{Application.version}", 14,
+                TextDim, TextAnchor.MiddleRight);
         }
 
         void DrawEnd()

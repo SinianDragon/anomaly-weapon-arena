@@ -75,7 +75,14 @@ namespace AnomalyArena
         protected Transform artPivot;
         protected Renderer artSprite;
         protected virtual Texture2D ArtTexture => null;
+        /// <summary>蓄力时换上的发光版立牌（没有就退回染色）。</summary>
+        protected virtual Texture2D ArtWindupTexture => null;
         protected virtual float ArtHeight => 2f;
+
+        /// <summary>美术版蓄力发光层；为空时蓄力表现用染色代替。</summary>
+        protected Renderer artWindupSprite;
+        // 受伤保护期间罩在身上的泡泡（白盒是半透明球，美术版是泡泡贴图）
+        GameObject shieldVisual;
 
         /// <summary>头顶的位置（血条放这里）：美术版是立牌顶，沿镜头上方算。</summary>
         public Vector3 HeadPoint(Camera cam)
@@ -90,9 +97,50 @@ namespace AnomalyArena
             {
                 Art.HideWhitebox(gameObject);
                 artPivot = Art.Billboard(transform, ArtTexture, ArtHeight, Art.OrderCharacter, out artSprite);
+                if (ArtWindupTexture)
+                {
+                    artWindupSprite = Art.BillboardLayer(artPivot, ArtTexture, ArtHeight, ArtWindupTexture,
+                        Art.OrderCharacter);
+                    artWindupSprite.enabled = false;
+                }
             }
             squashTarget = artPivot ? artPivot : bodyRenderer ? bodyRenderer.transform : null;
             if (squashTarget) squashBase = squashTarget.localScale;
+            if (protectionTime > 0f) BuildShieldVisual();
+        }
+
+        /// <summary>蓄力发光：有发光版立牌就换上它，否则返回 false 让调用方用染色表现。</summary>
+        protected bool ShowArtWindup(bool on)
+        {
+            if (!artWindupSprite) return false;
+            artWindupSprite.enabled = on;
+            artSprite.enabled = !on;
+            return true;
+        }
+
+        void BuildShieldVisual()
+        {
+            if (artPivot && Art.Set.shieldBubble)
+            {
+                // 泡泡比立牌大一圈，和立牌同心
+                var bubble = Art.Set.shieldBubble;
+                var r = Art.BillboardLayer(artPivot, bubble, ArtHeight * 1.15f, bubble, Art.OrderHeld);
+                r.transform.localPosition = new Vector3(0f, ArtHeight * 0.5f, -0.02f);
+                shieldVisual = r.gameObject;
+            }
+            else
+            {
+                shieldVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                UnityEngine.Object.DestroyImmediate(shieldVisual.GetComponent<Collider>()); // 挂在动态刚体下，必须立即删
+                shieldVisual.name = "Shield";
+                shieldVisual.transform.SetParent(transform, false);
+                shieldVisual.transform.localPosition = new Vector3(0f, radius * 1.6f, 0f);
+                shieldVisual.transform.localScale = Vector3.one * (radius * 2.8f);
+                var mr = shieldVisual.GetComponent<Renderer>();
+                mr.sharedMaterial = GM.FxMat(new Color(0.6f, 0.85f, 1f, 0.28f));
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            shieldVisual.SetActive(false);
         }
 
         // ───── 受击反馈 ─────
@@ -143,8 +191,15 @@ namespace AnomalyArena
                 _ => (heavy ? 14 : 9, heavy ? 11f : 8f, 120f),
             };
             Fx.Burst(at, spread >= 360f ? Vector3.zero : dir, c, count, speed, spread, size);
-            Fx.Pop(at, c, radius * (heavy ? 3.5f : 2.5f));
+            var art = Art.On ? Art.Set : null;
+            if (art && art.hitSpark)
+                Fx.SpriteBillboard(art.hitSpark, at + Vector3.up * 0.3f, radius * 1.2f, radius * (heavy ? 3.2f : 2.4f), 0.2f);
+            else
+                Fx.Pop(at, c, radius * (heavy ? 3.5f : 2.5f));
             if (heavy) Fx.Ring(Position, radius + 2.5f, c);
+            // 撞墙、被尸体砸到：脚下扬起一团尘土
+            if (kind == HitKind.Slam && art && art.dust)
+                Fx.SpriteBillboard(art.dust, new Vector3(Position.x, 0.1f, Position.z), radius * 1.5f, radius * 3.5f, 0.45f);
 
             GM.hud.DamageNumber(Position, amount, isPlayer ? new Color(1f, 0.3f, 0.25f) : new Color(1f, 0.95f, 0.6f), heavy || isPlayer);
             if (isPlayer)
@@ -168,6 +223,12 @@ namespace AnomalyArena
         {
             // 用真实时间：顿帧期间闪白和压扁照样播放，正好是“定格一下”的效果
             float dt = Time.unscaledDeltaTime;
+            if (shieldVisual)
+            {
+                // 保护快结束的最后 0.15 秒闪烁，提示“马上又会挨打了”
+                bool show = Protected && IsAlive && (protectTimer > 0.15f || Mathf.Repeat(Time.time * 20f, 1f) < 0.5f);
+                if (shieldVisual.activeSelf != show) shieldVisual.SetActive(show);
+            }
             if (flashTimer > 0f || flashing)
             {
                 flashTimer -= dt;
@@ -191,6 +252,7 @@ namespace AnomalyArena
             if (artSprite)
             {
                 Art.Tint(artSprite, on ? ArtFlashColor : Color.white);
+                Art.Tint(artWindupSprite, on ? ArtFlashColor : Color.white);
             }
             else if (bodyRenderer)
             {

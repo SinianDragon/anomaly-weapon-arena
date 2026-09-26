@@ -32,6 +32,7 @@ namespace AnomalyArena
         public override float CorpseDamage => attackDamage;
         protected override Texture2D ArtTexture => Art.Set ? (IsLarge ? Art.Set.enemyLarge : Art.Set.enemySmall) : null;
         protected override float ArtHeight => IsLarge ? Art.Set.enemyLargeHeight : Art.Set.enemySmallHeight;
+        protected override Texture2D ArtWindupTexture => Art.Set ? (IsLarge ? Art.Set.enemyLargeWindup : Art.Set.enemySmallWindup) : null;
 
         Vector3 facing = Vector3.back;
         bool windup;
@@ -54,7 +55,10 @@ namespace AnomalyArena
                 // 方向已锁定，不再跟着玩家转
                 Stop();
                 windupTimer -= dt;
-                if (artSprite) Art.Tint(artSprite, Color.Lerp(Color.white, new Color(1f, 0.85f, 0.2f), 0.5f + 0.5f * Mathf.Sin(Time.time * 30f)));
+                // 蓄力中一闪一闪：有发光版就让发光版忽明忽暗，没有就把立牌染黄
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 30f);
+                if (artWindupSprite) Art.Tint(artWindupSprite, Color.Lerp(Color.white, new Color(1.35f, 1.3f, 1.1f), pulse));
+                else if (artSprite) Art.Tint(artSprite, Color.Lerp(Color.white, new Color(1f, 0.85f, 0.2f), pulse));
                 if (windupTimer <= 0f)
                 {
                     PerformAttack();
@@ -85,7 +89,17 @@ namespace AnomalyArena
 
         void PerformAttack()
         {
-            Fx.Sector(Position, facing, radius + attackRange, attackArc, new Color(1f, 0.3f, 0.2f, 0.55f));
+            var arc = Art.On ? Art.Set.enemyPunchArc : null;
+            if (arc)
+            {
+                // 美术版：拳头前方闪一道弧光（贴图右边 = 拳头方向），长度约等于拳头的判定距离
+                float reach = radius + attackRange;
+                Fx.SpriteFlat(arc, Query.AtCastHeight(Position) + facing * (reach * 0.7f), facing, reach * 1.4f, 0.2f);
+            }
+            else
+            {
+                Fx.Sector(Position, facing, radius + attackRange, attackArc, new Color(1f, 0.3f, 0.2f, 0.55f));
+            }
             var p = GM.player;
             var shield = p.HeldShield;
             if (shield != null && shield != this && InFist(shield))
@@ -133,6 +147,7 @@ namespace AnomalyArena
         void SetLook(bool yellow)
         {
             if (bodyRenderer) bodyRenderer.sharedMaterial = yellow && windupMaterial ? windupMaterial : normalMaterial;
+            if (ShowArtWindup(yellow)) return;
             if (!yellow && artSprite) Art.Tint(artSprite, Color.white);
         }
 

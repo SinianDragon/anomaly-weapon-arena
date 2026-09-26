@@ -18,6 +18,9 @@ namespace AnomalyArena.EditorTools
         const string EffectDir = Root + "/Effects";
         public const string ScenePath = Root + "/Scenes/Arena.unity";
 
+        /// <summary>发布版本号：写进 PlayerSettings.bundleVersion，标题画面右下角显示。</summary>
+        public const string Version = "1.0.0";
+
         const float LargeRadius = 1f, LargeHeight = 4f; // 大型敌人 = 小型（半径 0.5、高 2）的两倍
 
         [MenuItem("Anomaly Arena/1. Build Whitebox Scene")]
@@ -148,6 +151,7 @@ namespace AnomalyArena.EditorTools
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
             PlayerSettings.productName = "Anomaly Weapon Arena";
+            PlayerSettings.bundleVersion = Version;
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true; // GitHub Pages 不返回 Content-Encoding
             PlayerSettings.defaultWebScreenWidth = 1280;
@@ -200,6 +204,7 @@ namespace AnomalyArena.EditorTools
             EditorUtility.SetDirty(spawner);
             EditorSceneManager.SaveScene(scene);
             PlayerSettings.productName = "Anomaly Weapon Arena";
+            PlayerSettings.bundleVersion = Version;
             AssetDatabase.SaveAssets();
             Debug.Log("[AnomalyArena] Existing scene updated: texts, art set, enemies, weapon supply.");
         }
@@ -281,12 +286,28 @@ namespace AnomalyArena.EditorTools
             set.knife = Tex("knife");
             set.missileLauncher = Tex("missile_launcher");
             set.hookHilt = Tex("hook_hilt");
-            set.hookMid = Tex("hook_mid");
+            set.hookMid = Tex("hook_mid", true); // 一节链条，沿长度重复平铺
             set.hookTip = Tex("hook_tip");
             set.missile = Tex("missile");
             set.flame = Tex("flame");
             set.floor = Tex("floor_sand_muted", true); // 去饱和、降对比的沙地，文字压在上面也看得清
             set.gapEdge = Tex("gap_edge");
+            set.wallBrick = Tex("wall_brick", true);
+            // 1.0 素材：蓄力发光（由原图加光晕生成，四周边距相同）、尸体、特效
+            set.enemySmallWindup = Tex("enemy_small_windup");
+            set.enemyLargeWindup = Tex("enemy_large_windup");
+            set.corpseSmall = Tex("corpse_small");
+            set.corpseLarge = Tex("corpse_large");
+            set.rocketFlame = Tex("rocket_flame");
+            set.bullet = Tex("bullet");
+            set.enemyPunchArc = Tex("enemy_punch_arc");
+            set.hitSpark = Tex("hit_spark");
+            set.dust = Tex("dust");
+            set.explosionFrames = new[] { Tex("explosion_0"), Tex("explosion_1"), Tex("explosion_2") };
+            set.explosionRing = Tex("explosion_ring");
+            set.shieldBubble = Tex("shield_bubble");
+            set.spawnXSmall = Tex("spawn_x_small");
+            set.spawnXLarge = Tex("spawn_x_large");
             EditorUtility.SetDirty(set);
             return set;
         }

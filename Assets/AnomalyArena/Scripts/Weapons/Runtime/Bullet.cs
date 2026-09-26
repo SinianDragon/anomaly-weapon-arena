@@ -16,8 +16,17 @@ namespace AnomalyArena
             pos = Query.AtCastHeight(start);
             dir = Query.Flat(direction).normalized;
             transform.position = pos;
-            MakeVisual(transform, PrimitiveType.Sphere, Vector3.one * 0.3f, new Color(1f, 0.85f, 0.3f));
-            AddTrail(new Color(1f, 0.85f, 0.3f, 0.8f), 0.15f);
+            transform.rotation = Quaternion.LookRotation(dir);
+            if (Art.On && Art.Set.bullet)
+            {
+                // 美术版：弹头朝右、自带拖尾的子弹贴图，平放、指向飞行方向（拖尾在身后）
+                Art.Flat(transform, Art.Set.bullet, 1.3f, Art.OrderProjectile, out _, new Vector3(0f, 0f, -0.4f));
+            }
+            else
+            {
+                MakeVisual(transform, PrimitiveType.Sphere, Vector3.one * 0.3f, new Color(1f, 0.85f, 0.3f));
+                AddTrail(new Color(1f, 0.85f, 0.3f, 0.8f), 0.15f);
+            }
         }
 
         void FixedUpdate()

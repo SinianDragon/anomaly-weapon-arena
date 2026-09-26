@@ -15,6 +15,10 @@ MonoBehaviour:
   player: {fileID: 2800000, guid: e339d7979feeb46478dbccae5cca36f0, type: 3}
   enemySmall: {fileID: 2800000, guid: 4f8a9b83cac5cf04ba3e573dadc8937d, type: 3}
   enemyLarge: {fileID: 2800000, guid: 044f37e088aafda418b49792150bcbb1, type: 3}
+  enemySmallWindup: {fileID: 2800000, guid: fbf3ef923bfff4c44b72e1d64d7ea74d, type: 3}
+  enemyLargeWindup: {fileID: 2800000, guid: da6978c2907adcd4eb42a3dc21c792c9, type: 3}
+  corpseSmall: {fileID: 2800000, guid: f1fd16ba4dce96a4485619df6e12ae7f, type: 3}
+  corpseLarge: {fileID: 2800000, guid: 88111e3b6f375424a918615ada32bef1, type: 3}
   gun: {fileID: 2800000, guid: 185b8027850f9d44b903b795b3a30488, type: 3}
   knife: {fileID: 2800000, guid: fd294cc83f071004e8dcc82d45684795, type: 3}
   missileLauncher: {fileID: 2800000, guid: 23db71d9b719e08409ba70aefcf12102, type: 3}
@@ -23,9 +27,24 @@ MonoBehaviour:
   hookTip: {fileID: 2800000, guid: 9bfb70d30e8715740b9329ce23ee8c77, type: 3}
   missile: {fileID: 2800000, guid: ff49328439ec8eb498758cc3628f42f0, type: 3}
   flame: {fileID: 2800000, guid: a3e5c69bd56b1cd41a63429bfbbe890c, type: 3}
+  rocketFlame: {fileID: 2800000, guid: dcd84a26083de6f4cbda0e0dc45c435c, type: 3}
+  bullet: {fileID: 2800000, guid: 2ada0f261d1aae14ea6b09b29d3f3cae, type: 3}
+  enemyPunchArc: {fileID: 2800000, guid: 93c771538bfc333428e9521a1ff393a0, type: 3}
+  hitSpark: {fileID: 2800000, guid: 15d20dd15269a0a4da049623ae79eb6a, type: 3}
+  dust: {fileID: 2800000, guid: 2fdd0bfeb23d46c4284ea51fc697a4bc, type: 3}
+  explosionFrames:
+  - {fileID: 2800000, guid: bde0813814e5fd04c9bc4994b8861233, type: 3}
+  - {fileID: 2800000, guid: da035b1f67efc704bb448716b9b1ff2a, type: 3}
+  - {fileID: 2800000, guid: 9995d1a7d14e745478d0ecea4c775fea, type: 3}
+  explosionRing: {fileID: 2800000, guid: 6ddae65de277ac14c95364484d71a91b, type: 3}
+  shieldBubble: {fileID: 2800000, guid: c53f9cd55ca005644ab6637adf35ac9c, type: 3}
+  spawnXSmall: {fileID: 2800000, guid: a302c3d1a97754d42be2d6b4747bdadc, type: 3}
+  spawnXLarge: {fileID: 2800000, guid: e7a8b1be4c6707249b6cb730a0b6094b, type: 3}
   floor: {fileID: 2800000, guid: 7550c5d583859274699b55f4d9bd9879, type: 3}
   floorTileSize: 5
   gapEdge: {fileID: 2800000, guid: e9df82cf7ea2f6e4d9770f1405beceb6, type: 3}
+  wallBrick: {fileID: 2800000, guid: 6a9b01977430002499d9e41e94a297c5, type: 3}
+  wallTileSize: 1.5
   playerHeight: 1.4
   enemySmallHeight: 1.5
   enemyLargeHeight: 3
