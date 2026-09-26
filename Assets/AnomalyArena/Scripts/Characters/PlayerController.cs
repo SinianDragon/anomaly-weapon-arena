@@ -22,6 +22,8 @@ namespace AnomalyArena
         public Weapon NearPickup { get; private set; }
         public override Team Team => Team.Player;
         public override Vector3 AimDirection => aim;
+        protected override Texture2D ArtTexture => Art.Set ? Art.Set.player : null;
+        protected override float ArtHeight => Art.Set.playerHeight;
 
         void Update()
         {
@@ -48,6 +50,7 @@ namespace AnomalyArena
                 if (Weapon == null) Punch();
                 else TryUseWeapon();
             }
+            if (mouse.leftButton.wasReleasedThisFrame) ReleaseWeapon();
         }
 
         void UpdateAim()
@@ -76,22 +79,18 @@ namespace AnomalyArena
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 
-        /// <summary>空手出拳：前方小扇形，扣血并撞飞。</summary>
+        /// <summary>空手出拳：只打前方小扇形里最近的一个人，扣血并撞飞。</summary>
         void Punch()
         {
             if (State != CharacterState.Normal || weaponCooldown > 0f) return;
             weaponCooldown = punchCooldown;
             float reach = radius + punchRange;
             Fx.Sector(Position, aim, reach, punchArc, new Color(1f, 1f, 1f, 0.5f));
-            foreach (var c in Query.Characters(Query.AtCastHeight(Position), reach + 2f))
-            {
-                if (c == this || !c.IsAlive) continue;
-                Vector3 to = Query.Flat(c.Position - Position);
-                if (to.magnitude - c.Radius > reach) continue;
-                if (to.magnitude > c.Radius && Vector3.Angle(aim, to) > punchArc * 0.5f) continue;
-                Vector3 dir = to.sqrMagnitude > 1e-4f ? to.normalized : aim;
-                c.ReceiveDamage(DamageInfo.Attack(punchDamage, this, dir, punchKnockback));
-            }
+            var c = Query.MeleeTarget(this, Position, aim, reach, punchArc);
+            if (c == null) return;
+            Vector3 to = Query.Flat(c.Position - Position);
+            Vector3 dir = to.sqrMagnitude > 1e-4f ? to.normalized : aim;
+            c.ReceiveDamage(DamageInfo.Attack(punchDamage, this, dir, punchKnockback));
         }
 
         void HandlePickup(bool rightClick)
@@ -133,6 +132,7 @@ namespace AnomalyArena
         protected override void OnDied()
         {
             if (bodyRenderer) bodyRenderer.transform.localScale = new Vector3(1.3f, 0.2f, 1.3f);
+            if (artPivot) artPivot.localScale = new Vector3(1.3f, 0.3f, 1f);
         }
     }
 }

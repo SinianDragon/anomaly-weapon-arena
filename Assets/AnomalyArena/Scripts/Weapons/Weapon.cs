@@ -39,20 +39,53 @@ namespace AnomalyArena
         {
             switch (t)
             {
-                case WeaponType.Gun: return "枪";
-                case WeaponType.Knife: return "刀";
-                default: return "导弹";
+                case WeaponType.Gun: return "Gun";
+                case WeaponType.Knife: return "Knife";
+                default: return "Missile";
             }
         }
 
-        /// <summary>地上与界面显示的名字：“枪 ?” 或 “枪 · 反向射击”。</summary>
+        /// <summary>地上与界面显示的名字：“Gun ?” 或 “Gun · Reverse Shot”。</summary>
         public string Label => Revealed && effect ? $"{TypeName(type)} · {effect.displayName}" : $"{TypeName(type)} ?";
+
+        // 美术版：地上是立牌，拿在手里是平放的贴图
+        Transform groundArt, heldArt;
+        float groundArtHeight;
+
+        /// <summary>地上武器名字标签的锚点：美术版放在立牌顶上（沿镜头上方），不压在贴图上。</summary>
+        public Vector3 LabelPoint(Camera cam)
+        {
+            if (groundArt && cam) return groundArt.position + cam.transform.up * (groundArtHeight + 0.45f);
+            return transform.position + Vector3.up * 1.4f;
+        }
 
         public void Init(WeaponEffect e, int uses)
         {
             effect = e;
             maxUses = usesLeft = uses;
             phase = Random.value * 10f;
+            BuildArt();
+        }
+
+        void BuildArt()
+        {
+            if (!Art.On || !visual) return;
+            var s = Art.Set;
+            var tex = type == WeaponType.Gun ? s.gun : type == WeaponType.Knife ? s.knife : s.missileLauncher;
+            if (!tex) return;
+            Art.HideWhitebox(visual.gameObject);
+            groundArtHeight = s.groundWeaponWidth / Art.Aspect(tex);
+            groundArt = Art.Billboard(visual, tex, groundArtHeight, Art.OrderCharacter, out _);
+            groundArt.localPosition = new Vector3(0f, -0.4f, 0f);
+            float held = s.heldWeaponLength * (type == WeaponType.Knife ? 0.8f : 1f);
+            heldArt = Art.Flat(visual, tex, held, Art.OrderHeld, out _, new Vector3(0f, 0f, held * 0.3f));
+            SetArtHeld(false);
+        }
+
+        void SetArtHeld(bool held)
+        {
+            if (groundArt) groundArt.gameObject.SetActive(!held);
+            if (heldArt) heldArt.gameObject.SetActive(held);
         }
 
         public void ApplyDebugForce()
@@ -73,6 +106,7 @@ namespace AnomalyArena
                 visual.localPosition = Vector3.zero;
                 visual.localRotation = Quaternion.identity;
             }
+            SetArtHeld(true);
         }
 
         public void PlaceOnGround(Vector3 pos)
@@ -82,6 +116,7 @@ namespace AnomalyArena
             transform.SetParent(null, true);
             transform.position = new Vector3(pos.x, 0f, pos.z);
             transform.rotation = Quaternion.identity;
+            SetArtHeld(false);
         }
 
         public void Consume() => Destroy(gameObject);

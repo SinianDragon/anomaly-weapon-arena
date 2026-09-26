@@ -30,6 +30,30 @@ namespace AnomalyArena
             return list;
         }
 
+        /// <summary>
+        /// 近战只打一个人：前方扇形里（身体边缘在 reach 以内、方向在 arc/2 以内；贴身时不看角度）离得最近的那个角色。没有返回 null。
+        /// </summary>
+        public static Combatant MeleeTarget(IWeaponHolder self, Vector3 origin, Vector3 aim, float reach, float arcDeg)
+        {
+            Combatant best = null;
+            float bestEdge = float.MaxValue;
+            // 多查 2 格：大型敌人中心在 reach 外、身体边缘在 reach 内也要算
+            foreach (var c in Characters(AtCastHeight(origin), reach + 2f))
+            {
+                if ((IWeaponHolder)c == self || !c.IsAlive) continue;
+                Vector3 to = Flat(c.Position - origin);
+                float d = to.magnitude, edge = d - c.Radius;
+                if (edge > reach) continue;
+                if (d > c.Radius && Vector3.Angle(aim, to) > arcDeg * 0.5f) continue;
+                if (edge < bestEdge)
+                {
+                    bestEdge = edge;
+                    best = c;
+                }
+            }
+            return best;
+        }
+
         /// <summary>从 from 到 to 这一段是否撞到墙。</summary>
         public static bool WallBetween(Vector3 from, Vector3 to, out RaycastHit hit)
         {

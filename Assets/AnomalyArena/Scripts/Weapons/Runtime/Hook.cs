@@ -32,8 +32,18 @@ namespace AnomalyArena
             Bind(w, u);
             dir = u.AimDirection;
             phase = Phase.Extend;
+            if (Art.On && Art.Set.hookMid)
+            {
+                // 美术版：刀柄和刀尖不变，中段随长度拉长；白盒方块藏起来
+                GetComponent<Renderer>().enabled = false;
+                blade = new StretchBlade(Art.Set, 0.55f);
+            }
             UpdateBlade();
         }
+
+        StretchBlade blade;
+
+        void OnDestroy() => blade?.Destroy();
 
         bool Valid() => target != null && target.IsAlive && target.State == CharacterState.Hooked;
 
@@ -169,6 +179,7 @@ namespace AnomalyArena
             transform.position = origin + dir * (len * 0.5f);
             transform.rotation = Quaternion.LookRotation(dir);
             transform.localScale = new Vector3(0.12f, 0.06f, len);
+            blade?.Set(origin, dir, len);
         }
     }
 }

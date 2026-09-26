@@ -21,11 +21,31 @@ namespace AnomalyArena
             Owner = owner;
             pos = Query.AtCastHeight(start);
             dir = Query.Flat(direction).normalized;
-            var v = MakeVisual(transform, PrimitiveType.Cylinder, new Vector3(0.3f, 0.35f, 0.3f), new Color(0.9f, 0.35f, 0.2f));
-            v.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            body = v.GetComponent<Renderer>();
-            AddTrail(new Color(1f, 1f, 1f, 0.6f), 0.2f);
+            if (Art.On && Art.Set.missile)
+            {
+                // 美术版：导弹贴图 + 尾焰（尾焰贴图的头部贴着导弹尾部，火舌朝后）
+                Art.Flat(transform, Art.Set.missile, 1.6f, Art.OrderProjectile, out body);
+                if (Art.Set.flame)
+                    flame = Art.Flat(transform, Art.Set.flame, 1.3f, Art.OrderProjectile, out _,
+                        new Vector3(0f, 0f, -1.4f));
+            }
+            else
+            {
+                var v = MakeVisual(transform, PrimitiveType.Cylinder, new Vector3(0.3f, 0.35f, 0.3f),
+                    new Color(0.9f, 0.35f, 0.2f));
+                v.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                body = v.GetComponent<Renderer>();
+                AddTrail(new Color(1f, 1f, 1f, 0.6f), 0.2f);
+            }
+
             UpdateTransform();
+        }
+
+        Transform flame;
+
+        void Update()
+        {
+            if (flame) flame.localScale = new Vector3(1f, 1f, 0.85f + 0.3f * Mathf.PerlinNoise(Time.time * 12f, 0f));
         }
 
         void FixedUpdate()
@@ -45,6 +65,7 @@ namespace AnomalyArena
                 Explode();
                 return;
             }
+
             pos = next;
 
             foreach (var c in Query.Characters(pos, 0.4f))
@@ -54,11 +75,13 @@ namespace AnomalyArena
                 Explode();
                 return;
             }
+
             if (t >= cfg.lifetime || Mathf.Abs(pos.x) > 40f || Mathf.Abs(pos.z) > 40f)
             {
                 Explode();
                 return;
             }
+
             UpdateTransform();
         }
 
@@ -68,7 +91,9 @@ namespace AnomalyArena
             var gm = GameManager.Instance;
             var candidates = new System.Collections.Generic.List<Combatant>();
             if (gm.player != null && gm.player.IsAlive) candidates.Add(gm.player);
-            foreach (var e in gm.waves.Alive) if (e != null && e.IsAlive) candidates.Add(e);
+            foreach (var e in gm.waves.Alive)
+                if (e != null && e.IsAlive)
+                    candidates.Add(e);
             float total = 0f;
             foreach (var c in candidates) total += Weight(c);
             target = null;
@@ -81,13 +106,16 @@ namespace AnomalyArena
                 target = c;
                 break;
             }
+
             if (target == null) target = candidates[candidates.Count - 1];
             if (!locked)
             {
                 locked = true;
-                body.sharedMaterial = gm.Mat(new Color(1f, 0.15f, 0.15f));
+                if (Art.On) Art.Tint(body, new Color(1f, 0.45f, 0.45f));
+                else body.sharedMaterial = gm.Mat(new Color(1f, 0.15f, 0.15f));
             }
-            if (target == gm.player) gm.hud.Toast("导弹锁定了你！", new Color(1f, 0.5f, 0.45f));
+
+            if (target == gm.player) gm.hud.Toast("The missile locked onto YOU!", new Color(1f, 0.5f, 0.45f));
         }
 
         float Weight(Combatant c) => c.Team == Team.Player ? cfg.playerWeight : cfg.enemyWeight;
@@ -100,8 +128,9 @@ namespace AnomalyArena
                 if (!c.IsAlive) continue;
                 Vector3 away = Query.Flat(c.Position - pos);
                 if (away.sqrMagnitude < 1e-4f) away = Random.insideUnitSphere;
-                c.ReceiveDamage(DamageInfo.Attack(cfg.damage, this, away, cfg.knockback));
+                c.ReceiveDamage(DamageInfo.Attack(cfg.damage, this, away, cfg.knockback, HitKind.Blast));
             }
+
             Destroy(gameObject);
         }
 

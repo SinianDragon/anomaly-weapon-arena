@@ -2,14 +2,15 @@
 
 俯视角竞技场原型：捡起外形熟悉、功能要第一次用了才揭晓的武器，清完三波敌人，或者把它们打进缺口。
 
-- 在线试玩（GitHub Pages）：https://joewenbozhang-blip.github.io/anomaly-weapon-arena/
-- 引擎：Unity 6000.5.10f1 + URP，目标平台 WebGL
+- 在线试玩（GitHub Pages）：https://siniandragon.github.io/anomaly-weapon-arena/
+- 引擎：Unity 6000.6.3f1 + URP，目标平台 WebGL
+- 游戏内全英文；标题画面可以在白盒 / 美术版之间切换（ART 按钮或 T 键），默认白盒
 
 ## 打开工程
 
-1. 用 Unity Hub 添加这个文件夹，编辑器版本选 6000.5.10f1。
+1. 用 Unity Hub 添加这个文件夹，编辑器版本选 6000.6.3f1。
 2. 打开 `Assets/AnomalyArena/Scenes/Arena.unity`，点 ▶ 运行。
-3. 需要重建场景或打包时，用菜单 **Anomaly Arena → 1. Build Whitebox Scene / 2. Build WebGL**。
+3. 需要重建场景或打包时，用菜单 **Anomaly Arena → 1. Build Whitebox Scene / 2. Build WebGL**；不想重建场景、只想套用最新改动时用 **3. Update Existing Scene**。
 
 代码结构、调数值的方式和待定项的暂定处理见 [`Assets/AnomalyArena/README.md`](Assets/AnomalyArena/README.md)。
 

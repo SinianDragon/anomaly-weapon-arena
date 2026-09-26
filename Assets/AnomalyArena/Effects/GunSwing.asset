@@ -14,11 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AnomalyArena.GunSwingEffect
   id: 1
   type: 0
-  displayName: "\u6325\u780D"
-  description: "\u628A\u67AA\u5F53\u68CD\u5B50\u6325\uFF1A\u524D\u65B9 90\xB0 \u6247\u5F62\uFF0C\u6263
-    5 \u8840\u5E76\u628A\u654C\u4EBA\u649E\u98DE 5 \u683C"
+  displayName: Charge Swing
+  description: Hold to charge (you slow down), release to hit the nearest enemy in front. Longer charge = longer reach, more damage, bigger knockback
   cooldown: 0.35
-  arcDegrees: 90
-  radius: 2.5
-  damage: 5
-  knockback: 5
+  minRadius: 2.5
+  minArc: 90
+  minDamage: 6
+  minKnockback: 5
+  maxRadius: 5
+  maxArc: 150
+  maxDamage: 15
+  maxKnockback: 10
+  maxChargeTime: 1
+  chargeMoveMultiplier: 0.4

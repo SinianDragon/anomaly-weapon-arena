@@ -64,6 +64,48 @@ namespace AnomalyArena
             f.update = (t, k) => t.localScale = Vector3.one * Mathf.Lerp(0.2f, size, Mathf.Sqrt(k));
         }
 
+        /// <summary>
+        /// 受击碎片：count 个小方块从 pos 朝 dir 左右 spreadDeg 度内飞出，先快后慢、边飞边缩小变淡。
+        /// dir 为零时全向飞。
+        /// </summary>
+        public static void Burst(Vector3 pos, Vector3 dir, Color c, int count, float speed, float spreadDeg, float size)
+        {
+            dir = Query.Flat(dir);
+            bool omni = dir.sqrMagnitude < 1e-4f;
+            if (!omni) dir.Normalize();
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 d = omni
+                    ? Quaternion.AngleAxis(UnityEngine.Random.Range(0f, 360f), Vector3.up) * Vector3.forward
+                    : Quaternion.AngleAxis(UnityEngine.Random.Range(-spreadDeg, spreadDeg) * 0.5f, Vector3.up) * dir;
+                d.y = UnityEngine.Random.Range(0.1f, 0.6f); // 带一点向上，俯视镜头下看得出“溅起来”
+                Vector3 v = d.normalized * speed * UnityEngine.Random.Range(0.6f, 1.2f);
+                float s = size * UnityEngine.Random.Range(0.6f, 1.3f);
+                float life = UnityEngine.Random.Range(0.22f, 0.38f);
+                var go = Prim(PrimitiveType.Cube, pos, Vector3.one * s);
+                go.transform.rotation = UnityEngine.Random.rotation;
+                var f = Make(go, c, life);
+                f.update = (t, k) =>
+                {
+                    float travel = 1f - (1f - k) * (1f - k); // 先快后慢
+                    t.position = pos + v * (life * travel);
+                    t.localScale = Vector3.one * (s * (1f - k * 0.7f));
+                };
+            }
+        }
+
+        /// <summary>地面冲击环：从中心快速扩散到 radius 后消失。</summary>
+        public static void Ring(Vector3 pos, float radius, Color c, float life = 0.25f)
+        {
+            var go = Prim(PrimitiveType.Cylinder, new Vector3(pos.x, 0.08f, pos.z), new Vector3(0.3f, 0.01f, 0.3f));
+            var f = Make(go, c, life);
+            f.update = (t, k) =>
+            {
+                float d = Mathf.Lerp(0.3f, radius * 2f, Mathf.Sqrt(k));
+                t.localScale = new Vector3(d, 0.01f, d);
+            };
+        }
+
         public static void Explosion(Vector3 pos, float radius)
         {
             var f = Make(Prim(PrimitiveType.Sphere, pos, Vector3.one), new Color(1f, 0.55f, 0.15f, 0.6f), 0.4f);
@@ -80,6 +122,16 @@ namespace AnomalyArena
             var go = new GameObject("SwingArc");
             go.transform.position = new Vector3(origin.x, 0.05f, origin.z);
             go.transform.rotation = Quaternion.LookRotation(Query.Flat(dir));
+            var mesh = new Mesh();
+            SectorMesh(mesh, radius, arcDeg);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>();
+            Make(go, c, 0.15f).mesh = mesh;
+        }
+
+        /// <summary>把 mesh 重建成朝 +Z 的扇形（原点在圆心）。蓄力预览每帧调用。</summary>
+        public static void SectorMesh(Mesh mesh, float radius, float arcDeg)
+        {
             int seg = Mathf.Max(4, Mathf.CeilToInt(arcDeg / 8f));
             var verts = new Vector3[seg + 2];
             var tris = new int[seg * 3];
@@ -93,11 +145,10 @@ namespace AnomalyArena
                 tris[i * 3 + 1] = i + 1;
                 tris[i * 3 + 2] = i + 2;
             }
-            var mesh = new Mesh { vertices = verts, triangles = tris };
+            mesh.Clear();
+            mesh.vertices = verts;
+            mesh.triangles = tris;
             mesh.RecalculateNormals();
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>();
-            Make(go, c, 0.15f).mesh = mesh;
         }
     }
 }

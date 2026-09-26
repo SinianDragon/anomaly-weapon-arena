@@ -318,9 +318,12 @@ MonoBehaviour:
   bodyRenderer: {fileID: 1930612075353007025}
   hand: {fileID: 3281240089945083305}
   attackDamage: 5
-  attackRange: 1.5
-  windupTime: 0.4
+  triggerRange: 0.3
+  attackRange: 0.8
+  attackArc: 120
+  windupTime: 0.5
   attackInterval: 1
   attackKnockback: 5
   normalMaterial: {fileID: 2100000, guid: f34e216ed4f6d4663b8d43ea5f4a3d5f, type: 2}
   windupMaterial: {fileID: 2100000, guid: 68461a710f0314dbeb3c0ea60ba7f661, type: 2}
+  large: 0

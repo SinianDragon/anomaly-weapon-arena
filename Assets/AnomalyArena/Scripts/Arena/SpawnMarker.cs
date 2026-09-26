@@ -15,7 +15,7 @@ namespace AnomalyArena
             var m = go.AddComponent<SpawnMarker>();
             m.large = large;
             m.timer = delay;
-            m.size = large ? 3f : 1.2f;
+            m.size = large ? 2.4f : 1.2f; // 大型敌人是小型的两倍
             for (int i = 0; i < 2; i++)
             {
                 var bar = GameObject.CreatePrimitive(PrimitiveType.Cube);

@@ -25,17 +25,30 @@ namespace AnomalyArena
 
     public enum DeathCause { None, HpDepleted, FellIntoGap }
 
+    /// <summary>受击特效的种类：决定碎片颜色、多少和有没有冲击环。</summary>
+    public enum HitKind
+    {
+        Blunt,  // 拳头、挥砍
+        Bullet, // 子弹
+        Pierce, // 飞刀、人形导弹穿过
+        Slam,   // 撞墙、被尸体砸到
+        Blast,  // 爆炸
+    }
+
     public struct DamageInfo
     {
         public float amount;
         /// <summary>攻击伤害受 0.5 秒保护与冲刺免疫影响；撞墙伤害不走这里。</summary>
         public bool isAttack;
+        /// <summary>撞飞方向；为零时受击特效的碎片随机飞。</summary>
         public Vector3 knockDir;
         public float knockDistance;
         public IDamageDealer dealer;
+        public HitKind kind;
 
-        public static DamageInfo Attack(float amount, IDamageDealer dealer, Vector3 knockDir = default, float knockDistance = 0f) =>
-            new DamageInfo { amount = amount, isAttack = true, dealer = dealer, knockDir = knockDir, knockDistance = knockDistance };
+        public static DamageInfo Attack(float amount, IDamageDealer dealer, Vector3 knockDir = default, float knockDistance = 0f,
+            HitKind kind = HitKind.Blunt) =>
+            new DamageInfo { amount = amount, isAttack = true, dealer = dealer, knockDir = knockDir, knockDistance = knockDistance, kind = kind };
     }
 
     public interface IDamageDealer

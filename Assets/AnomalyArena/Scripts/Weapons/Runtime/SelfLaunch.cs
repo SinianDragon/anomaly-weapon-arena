@@ -22,6 +22,22 @@ namespace AnomalyArena
             dir = Query.Flat(u.AimDirection).normalized;
             remaining = cfg.distance;
             u.SetState(CharacterState.Dashing);
+            // 美术版：玩家身后拖一团导弹尾焰（挂在这个流程物体上，流程结束一起销毁）
+            if (Art.On && Art.Set.flame)
+            {
+                flame = Art.Flat(transform, Art.Set.flame, 1.6f, Art.OrderProjectile, out _);
+                PlaceFlame(u.Position);
+            }
+        }
+
+        Transform flame;
+
+        void PlaceFlame(Vector3 p)
+        {
+            if (!flame) return;
+            transform.position = Query.AtCastHeight(p) - dir * (user.Radius + 0.7f);
+            transform.rotation = Quaternion.LookRotation(dir);
+            flame.localScale = new Vector3(1f, 1f, 0.85f + 0.3f * Mathf.PerlinNoise(Time.time * 12f, 0f));
         }
 
         void FixedUpdate()
@@ -57,12 +73,13 @@ namespace AnomalyArena
                 }
             }
             user.SetMovePosition(p);
+            PlaceFlame(p);
 
             foreach (var c in Query.Characters(Query.AtCastHeight(p), r + 0.1f))
                 if ((IWeaponHolder)c != user && c.IsAlive) c.Kill(); // 大型也直接死
 
             trailTimer -= Time.fixedDeltaTime;
-            if (trailTimer <= 0f)
+            if (trailTimer <= 0f && !flame)
             {
                 trailTimer = 0.04f;
                 Fx.Pop(Query.AtCastHeight(p), new Color(0.9f, 0.35f, 0.2f), 0.8f);
