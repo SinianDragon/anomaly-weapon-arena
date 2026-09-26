@@ -1,0 +1,11 @@
+<linker>
+  <!--
+    运行时用 GameObject.CreatePrimitive 生成面片 / 球体特效，Unity 会自动给它们加 MeshCollider / SphereCollider（随后立刻删掉）。
+    场景里没有物体用到这两种碰撞体，WebGL 打包的“裁剪引擎代码”会把它们删掉，网页里就会刷
+    "Can't add component because class 'MeshCollider' doesn't exist!"。这里显式保留。
+  -->
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <type fullname="UnityEngine.MeshCollider" preserve="all" />
+    <type fullname="UnityEngine.SphereCollider" preserve="all" />
+  </assembly>
+</linker>
