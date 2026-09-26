@@ -128,3 +128,8 @@ InitTestScene*.unity*
 !/[Aa]ssets/SourceFiles/InputSystem/
 !/[Aa]ssets/SourceFiles/InputSystem.meta
 /.claude/
+
+# JetBrains Rider 的 IDE 设置（任意层级），属于个人环境，不进仓库
+.idea/
+# Codex 的个人配置
+.codex/

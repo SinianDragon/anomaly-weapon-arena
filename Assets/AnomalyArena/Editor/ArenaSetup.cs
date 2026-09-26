@@ -21,6 +21,7 @@ namespace AnomalyArena.EditorTools
         const float Half = 15f;       // 30 × 30
         const float WallThick = 1f;
         const float WallHeight = 1.5f;
+        const float LargeRadius = 1f, LargeHeight = 4f; // 大型敌人 = 小型（半径 0.5、高 2）的两倍
 
         struct Gap
         {
@@ -65,19 +66,8 @@ namespace AnomalyArena.EditorTools
             var mMissile = Lit("Missile", new Color(0.9f, 0.35f, 0.2f));
             var noFriction = NoFriction();
 
-            // ───── 效果数值资源（已存在则保留数值） ─────
-            var swing = Effect<GunSwingEffect>("GunSwing", EffectId.GunSwing, WeaponType.Gun, "挥砍", 0.35f,
-                "把枪当棍子挥：前方 90° 扇形，扣 5 血并把敌人撞飞 5 格");
-            var reverse = Effect<GunReverseShotEffect>("GunReverseShot", EffectId.GunReverseShot, WeaponType.Gun, "反向射击", 0.3f,
-                "子弹从你背后射出；后坐力把你往前推 3 格——别面朝缺口开枪");
-            var knifeThrow = Effect<KnifeThrowEffect>("KnifeThrow", EffectId.KnifeThrow, WeaponType.Knife, "飞刀", 0.3f,
-                "直线飞 12 格。打死敌人会带着尸体飞回你出手时站的位置，快躲开");
-            var hook = Effect<KnifeHookEffect>("KnifeHook", EffectId.KnifeHook, WeaponType.Knife, "钩子", 0.2f,
-                "钩住路上第一个敌人拉到身前当掩体；再按左键把它扔出去");
-            var homing = Effect<MissileHomingEffect>("MissileHoming", EffectId.MissileHoming, WeaponType.Missile, "追踪", 0.5f,
-                "先朝随机方向飞，1 秒后随机锁定一个目标（更容易锁你）；爆炸会伤到所有人");
-            var self = Effect<MissileSelfLaunchEffect>("MissileSelfLaunch", EffectId.MissileSelfLaunch, WeaponType.Missile, "发射自己", 0.3f,
-                "把你自己当导弹冲出 15 格：撞死敌人、撞墙反弹，路上有缺口就会冲下去");
+            // ───── 效果数值资源（已存在则保留数值，名字和说明每次刷新） ─────
+            var (swing, reverse, knifeThrow, hook, homing, self) = Effects();
 
             // ───── 预制体 ─────
             var playerGo = BuildCharacter("Player", 0.5f, 2f, 1f, mPlayer, mFacing, noFriction, charLayer, out var pBody, out var pHand);
@@ -93,12 +83,14 @@ namespace AnomalyArena.EditorTools
 
             var smallGo = BuildCharacter("EnemySmall", 0.5f, 2f, 1f, mSmall, mFacing, noFriction, charLayer, out var sBody, out var sHand);
             var small = smallGo.AddComponent<Enemy>();
-            SetEnemy(small, 10f, 6f * 0.9f, 0.5f, 1f, 5f, 1.5f, 0.4f, 1f, sBody, sHand, mSmall, mWindup);
+            SetEnemy(small, 10f, 6f * 0.9f, 0.5f, 1f, 5f, 0.3f, 0.8f, 0.5f, 1f, sBody, sHand, mSmall, mWindup);
             var smallPrefab = SavePrefab(smallGo, "EnemySmall").GetComponent<Enemy>();
 
-            var largeGo = BuildCharacter("EnemyLarge", 1.5f, 3f, 5f, mLarge, mFacing, noFriction, charLayer, out var lBody, out var lHand);
+            // 大型 = 小型的两倍大小：半径 1、高 4
+            var largeGo = BuildCharacter("EnemyLarge", LargeRadius, LargeHeight, 5f, mLarge, mFacing, noFriction, charLayer, out var lBody, out var lHand);
             var large = largeGo.AddComponent<Enemy>();
-            SetEnemy(large, 30f, 6f * 0.6f, 1.5f, 0.5f, 15f, 2f, 0.8f, 2f, lBody, lHand, mLarge, mWindup);
+            SetEnemy(large, 30f, 6f * 0.6f, LargeRadius, 0.5f, 15f, 0.4f, 1f, 0.8f, 2f, lBody, lHand, mLarge, mWindup);
+            large.large = true;
             var largePrefab = SavePrefab(largeGo, "EnemyLarge").GetComponent<Enemy>();
 
             // 地上的枪 / 刀 / 导弹：细长方块 / 扁平长条 / 竖着的圆柱
@@ -148,7 +140,7 @@ namespace AnomalyArena.EditorTools
             gm.litMaterial = mLit;
             gm.fxMaterial = mFx;
             gm.spawnMarkerMaterial = mSpawnX;
-            gm.uiFont = AssetDatabase.LoadAssetAtPath<Font>(Root + "/Fonts/UIFont.ttf");
+            gm.art = BuildArtSet();
 
             waves.smallPrefab = smallPrefab;
             waves.largePrefab = largePrefab;
@@ -165,7 +157,7 @@ namespace AnomalyArena.EditorTools
             EditorSceneManager.OpenScene(ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
-            PlayerSettings.productName = "反常武器竞技场";
+            PlayerSettings.productName = "Anomaly Weapon Arena";
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true; // GitHub Pages 不返回 Content-Encoding
             PlayerSettings.defaultWebScreenWidth = 1280;
@@ -184,6 +176,136 @@ namespace AnomalyArena.EditorTools
                 target = BuildTarget.WebGL,
             });
             Debug.Log("[AnomalyArena] WebGL build: " + report.summary.result);
+        }
+
+        /// <summary>
+        /// 不重建场景的更新：刷新效果名字 / 说明、生成美术素材表并挂到场景的 GameManager、
+        /// 把敌人预制体改成贴身挥拳的数值、大型敌人缩成小型的两倍、武器补给改成每波 3 / 5 / 8 把。已经调过的其他数值都保留。
+        /// </summary>
+        [MenuItem("Anomaly Arena/3. Update Existing Scene (texts, art, enemies, weapon supply)")]
+        public static void UpdateExisting()
+        {
+            Effects();
+            var art = BuildArtSet();
+            PatchEnemy(PrefabDir + "/EnemySmall.prefab", false, 0.5f, 2f, 0.3f, 0.8f, 0.5f);
+            PatchEnemy(PrefabDir + "/EnemyLarge.prefab", true, LargeRadius, LargeHeight, 0.4f, 1f, 0.8f);
+
+            var scene = EditorSceneManager.OpenScene(ScenePath);
+            var gm = Object.FindAnyObjectByType<GameManager>();
+            gm.art = art;
+            EditorUtility.SetDirty(gm);
+            // 地上上限放宽到 12，第 3 波的 8 把才放得下
+            var spawner = Object.FindAnyObjectByType<WeaponSpawner>();
+            spawner.perWaveCounts = new[] { 3, 5, 8 };
+            spawner.groundCap = 12;
+            EditorUtility.SetDirty(spawner);
+            EditorSceneManager.SaveScene(scene);
+            PlayerSettings.productName = "Anomaly Weapon Arena";
+            AssetDatabase.SaveAssets();
+            Debug.Log("[AnomalyArena] Existing scene updated: texts, art set, enemies, weapon supply.");
+        }
+
+        static void PatchEnemy(string path, bool large, float r, float height, float trigger, float range, float windup)
+        {
+            var root = PrefabUtility.LoadPrefabContents(path);
+            var e = root.GetComponent<Enemy>();
+            e.large = large;
+            e.radius = r;
+            e.triggerRange = trigger;
+            e.attackRange = range;
+            e.attackArc = 120f;
+            e.windupTime = windup;
+            ApplyBodySize(root, r, height);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        /// <summary>按半径和高度摆好碰撞体、白盒身体、朝向小方块和手的位置（BuildCharacter 和 PatchEnemy 共用）。</summary>
+        static void ApplyBodySize(GameObject root, float r, float height)
+        {
+            var col = root.GetComponent<CapsuleCollider>();
+            col.radius = r;
+            col.height = height;
+            col.center = new Vector3(0f, height * 0.5f, 0f);
+            // Unity 胶囊体默认直径 1、高 2
+            var body = root.transform.Find("Body");
+            body.localPosition = new Vector3(0f, height * 0.5f, 0f);
+            body.localScale = new Vector3(r * 2f, height * 0.5f, r * 2f);
+            var nose = root.transform.Find("Facing");
+            float s = Mathf.Max(0.25f, r * 0.4f);
+            nose.localPosition = new Vector3(0f, height * 0.72f, r);
+            nose.localScale = new Vector3(s, s, s);
+            root.transform.Find("Hand").localPosition = new Vector3(r * 0.9f, height * 0.45f, r * 0.6f);
+        }
+
+        static (GunSwingEffect, GunReverseShotEffect, KnifeThrowEffect, KnifeHookEffect, MissileHomingEffect, MissileSelfLaunchEffect) Effects()
+        {
+            var swing = Effect<GunSwingEffect>("GunSwing", EffectId.GunSwing, WeaponType.Gun, "Charge Swing", 0.35f,
+                "Hold to charge (you slow down), release to hit the nearest enemy in front. Longer charge = longer reach, more damage, bigger knockback");
+            var reverse = Effect<GunReverseShotEffect>("GunReverseShot", EffectId.GunReverseShot, WeaponType.Gun, "Reverse Shot", 0.3f,
+                "The bullet fires out of your BACK and the recoil shoves you 3 tiles forward - don't aim at a gap");
+            var knifeThrow = Effect<KnifeThrowEffect>("KnifeThrow", EffectId.KnifeThrow, WeaponType.Knife, "Throwing Knife", 0.3f,
+                "The knife spins 12 tiles in a straight line. A kill drags the corpse back to where you threw from - dodge it");
+            var hook = Effect<KnifeHookEffect>("KnifeHook", EffectId.KnifeHook, WeaponType.Knife, "Hook", 0.2f,
+                "The blade extends and hooks the first enemy, pulling it in as a shield; left click again to throw it");
+            var homing = Effect<MissileHomingEffect>("MissileHoming", EffectId.MissileHoming, WeaponType.Missile, "Homing", 0.5f,
+                "Flies off in a random direction, then locks onto a random target after 1s (it likes you best); the blast hits everyone");
+            var self = Effect<MissileSelfLaunchEffect>("MissileSelfLaunch", EffectId.MissileSelfLaunch, WeaponType.Missile, "Launch Yourself", 0.3f,
+                "Fire YOURSELF 15 tiles like a missile: kills enemies, bounces off walls, and dives into any gap on the way");
+            return (swing, reverse, knifeThrow, hook, homing, self);
+        }
+
+        // ───── 美术版素材 ─────
+
+        const string ArtDir = Root + "/Art";
+
+        /// <summary>设置贴图导入方式（透明、地板可平铺），生成 / 更新 ArtSet.asset。</summary>
+        static ArtSet BuildArtSet()
+        {
+            string path = ArtDir + "/ArtSet.asset";
+            var set = AssetDatabase.LoadAssetAtPath<ArtSet>(path);
+            if (set == null)
+            {
+                set = ScriptableObject.CreateInstance<ArtSet>();
+                AssetDatabase.CreateAsset(set, path);
+            }
+            set.player = Tex("player");
+            set.enemySmall = Tex("enemy_small");
+            set.enemyLarge = Tex("enemy_large");
+            set.gun = Tex("gun");
+            set.knife = Tex("knife");
+            set.missileLauncher = Tex("missile_launcher");
+            set.hookHilt = Tex("hook_hilt");
+            set.hookMid = Tex("hook_mid");
+            set.hookTip = Tex("hook_tip");
+            set.missile = Tex("missile");
+            set.flame = Tex("flame");
+            set.floor = Tex("floor_sand_muted", true); // 去饱和、降对比的沙地，文字压在上面也看得清
+            set.gapEdge = Tex("gap_edge");
+            EditorUtility.SetDirty(set);
+            return set;
+        }
+
+        static Texture2D Tex(string name, bool repeat = false)
+        {
+            string path = $"{ArtDir}/Textures/{name}.png";
+            if (AssetImporter.GetAtPath(path) is TextureImporter ti)
+            {
+                bool dirty = ti.textureType != TextureImporterType.Default || !ti.alphaIsTransparency || ti.npotScale != TextureImporterNPOTScale.None
+                             || ti.wrapMode != (repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp);
+                if (dirty)
+                {
+                    ti.textureType = TextureImporterType.Default;
+                    ti.alphaIsTransparency = true;
+                    ti.npotScale = TextureImporterNPOTScale.None; // 保留原始宽高比，面片按宽高比缩放
+                    ti.wrapMode = repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
+                    ti.mipmapEnabled = true;
+                    ti.SaveAndReimport();
+                }
+            }
+            var t = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (t == null) Debug.LogError("[AnomalyArena] Missing art texture: " + path);
+            return t;
         }
 
         // ───── 场地 ─────
@@ -301,18 +423,12 @@ namespace AnomalyArena.EditorTools
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.linearDamping = 0f;
             var col = root.AddComponent<CapsuleCollider>();
-            col.radius = r;
-            col.height = height;
-            col.center = new Vector3(0f, height * 0.5f, 0f);
             col.sharedMaterial = physMat;
 
-            // Unity 胶囊体默认直径 1、高 2
             var vis = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             vis.name = "Body";
             Object.DestroyImmediate(vis.GetComponent<Collider>());
             vis.transform.SetParent(root.transform, false);
-            vis.transform.localPosition = new Vector3(0f, height * 0.5f, 0f);
-            vis.transform.localScale = new Vector3(r * 2f, height * 0.5f, r * 2f);
             bodyRenderer = vis.GetComponent<Renderer>();
             bodyRenderer.sharedMaterial = body;
 
@@ -321,19 +437,15 @@ namespace AnomalyArena.EditorTools
             nose.name = "Facing";
             Object.DestroyImmediate(nose.GetComponent<Collider>());
             nose.transform.SetParent(root.transform, false);
-            float s = Mathf.Max(0.25f, r * 0.4f);
-            nose.transform.localPosition = new Vector3(0f, height * 0.72f, r);
-            nose.transform.localScale = new Vector3(s, s, s);
             nose.GetComponent<Renderer>().sharedMaterial = facing;
 
-            var h = new GameObject("Hand").transform;
-            h.SetParent(root.transform, false);
-            h.localPosition = new Vector3(r * 0.9f, height * 0.45f, r * 0.6f);
-            hand = h;
+            hand = new GameObject("Hand").transform;
+            hand.SetParent(root.transform, false);
+            ApplyBodySize(root, r, height);
             return root;
         }
 
-        static void SetEnemy(Enemy e, float hp, float speed, float r, float knockScale, float dmg, float range, float windup,
+        static void SetEnemy(Enemy e, float hp, float speed, float r, float knockScale, float dmg, float trigger, float range, float windup,
             float interval, Renderer body, Transform hand, Material normal, Material windupMat)
         {
             e.maxHp = hp;
@@ -342,7 +454,9 @@ namespace AnomalyArena.EditorTools
             e.knockbackScale = knockScale;
             e.protectionTime = 0f;
             e.attackDamage = dmg;
+            e.triggerRange = trigger;
             e.attackRange = range;
+            e.attackArc = 120f;
             e.windupTime = windup;
             e.attackInterval = interval;
             e.attackKnockback = 5f;

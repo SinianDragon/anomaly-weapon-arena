@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 524598edb744be343abea40b42f75d36, type: 3}
+  m_Name: ArtSet
+  m_EditorClassIdentifier: Assembly-CSharp::AnomalyArena.ArtSet
+  player: {fileID: 2800000, guid: e339d7979feeb46478dbccae5cca36f0, type: 3}
+  enemySmall: {fileID: 2800000, guid: 4f8a9b83cac5cf04ba3e573dadc8937d, type: 3}
+  enemyLarge: {fileID: 2800000, guid: 044f37e088aafda418b49792150bcbb1, type: 3}
+  gun: {fileID: 2800000, guid: 185b8027850f9d44b903b795b3a30488, type: 3}
+  knife: {fileID: 2800000, guid: fd294cc83f071004e8dcc82d45684795, type: 3}
+  missileLauncher: {fileID: 2800000, guid: 23db71d9b719e08409ba70aefcf12102, type: 3}
+  hookHilt: {fileID: 2800000, guid: 5eaef61a6bda8184d804d6bd99de1e11, type: 3}
+  hookMid: {fileID: 2800000, guid: a4c30620bf058d84283e23b4dfa7594a, type: 3}
+  hookTip: {fileID: 2800000, guid: 9bfb70d30e8715740b9329ce23ee8c77, type: 3}
+  missile: {fileID: 2800000, guid: ff49328439ec8eb498758cc3628f42f0, type: 3}
+  flame: {fileID: 2800000, guid: a3e5c69bd56b1cd41a63429bfbbe890c, type: 3}
+  floor: {fileID: 2800000, guid: 7550c5d583859274699b55f4d9bd9879, type: 3}
+  floorTileSize: 5
+  gapEdge: {fileID: 2800000, guid: e9df82cf7ea2f6e4d9770f1405beceb6, type: 3}
+  playerHeight: 1.4
+  enemySmallHeight: 1.5
+  enemyLargeHeight: 3
+  groundWeaponWidth: 3
+  heldWeaponLength: 2.2

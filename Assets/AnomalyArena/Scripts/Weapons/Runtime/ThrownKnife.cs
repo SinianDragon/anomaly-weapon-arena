@@ -26,9 +26,20 @@ namespace AnomalyArena
             Owner = owner;
             pos = Query.AtCastHeight(start);
             dir = Query.Flat(direction).normalized;
-            MakeVisual(transform, PrimitiveType.Cube, new Vector3(0.5f, 0.08f, 1f), new Color(0.82f, 0.88f, 0.94f));
-            AddTrail(new Color(0.85f, 0.9f, 1f, 0.7f), 0.12f);
+            // 刀身在空中旋转、拖尾很短：一眼看得出是扔出去的一把刀，而不是钩子那种伸长的刀身
+            spinner = new GameObject("Spin").transform;
+            spinner.SetParent(transform, false);
+            if (Art.On && Art.Set.knife) Art.Flat(spinner, Art.Set.knife, 1.6f, Art.OrderProjectile, out _);
+            else MakeVisual(spinner, PrimitiveType.Cube, new Vector3(0.18f, 0.08f, 1f), new Color(0.82f, 0.88f, 0.94f));
+            AddTrail(new Color(0.85f, 0.9f, 1f, 0.5f), 0.1f).time = 0.08f;
             UpdateTransform();
+        }
+
+        Transform spinner;
+
+        void Update()
+        {
+            if (spinner) spinner.Rotate(0f, (returning ? -1f : 1f) * 1080f * Time.deltaTime, 0f, Space.Self);
         }
 
         void FixedUpdate()
@@ -54,6 +65,7 @@ namespace AnomalyArena
                         StartReturn();
                         break;
                     }
+
                     if (!returning && traveled >= cfg.range) StartReturn();
                 }
             }
@@ -67,6 +79,7 @@ namespace AnomalyArena
                     Destroy(gameObject); // 尸体到达返回点后消失
                     return;
                 }
+
                 dir = to.normalized;
                 pos += dir * step;
                 if (corpse != null)
@@ -74,10 +87,11 @@ namespace AnomalyArena
                     foreach (var c in Query.Characters(pos, corpseRadius + 0.1f))
                     {
                         if (!c.IsAlive || !hitOnReturn.Add(c)) continue;
-                        c.ReceiveDamage(DamageInfo.Attack(corpseDamage, this, dir, cfg.corpseKnockback));
+                        c.ReceiveDamage(DamageInfo.Attack(corpseDamage, this, dir, cfg.corpseKnockback, HitKind.Slam));
                     }
                 }
             }
+
             UpdateTransform();
         }
 
@@ -85,14 +99,27 @@ namespace AnomalyArena
         {
             float dmg = c.CorpseDamage;
             float r = c.Radius;
-            c.ReceiveDamage(DamageInfo.Attack(cfg.damage, this));
+            c.ReceiveDamage(DamageInfo.Attack(cfg.damage, this, dir, 0f, HitKind.Pierce));
             if (c.IsAlive) return;
             // 打死了：带着这具尸体飞回
             corpseDamage = dmg;
             corpseRadius = r;
-            corpse = MakeVisual(transform, PrimitiveType.Capsule, new Vector3(r * 2f, r * 2f, r * 2f), new Color(0.42f, 0.36f, 0.34f),
-                new Vector3(0f, r - Query.CastHeight + 0.1f, -r));
-            corpse.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            var enemyTex = Art.On ? (c is Enemy e && e.IsLarge ? Art.Set.enemyLarge : Art.Set.enemySmall) : null;
+            if (enemyTex)
+            {
+                // 美术版：敌人贴图躺平、变灰，拖在刀后面
+                corpse = Art.Flat(transform, enemyTex, r * 2.6f, Art.OrderProjectile, out var cr,
+                    new Vector3(0f, 0.1f - Query.CastHeight, -r));
+                Art.Tint(cr, new Color(0.55f, 0.5f, 0.5f));
+            }
+            else
+            {
+                corpse = MakeVisual(transform, PrimitiveType.Capsule, new Vector3(r * 2f, r * 2f, r * 2f),
+                    new Color(0.42f, 0.36f, 0.34f),
+                    new Vector3(0f, r - Query.CastHeight + 0.1f, -r));
+                corpse.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
+
             hitOnReturn.Add(c);
         }
 
@@ -108,7 +135,8 @@ namespace AnomalyArena
                 lockMarker.name = "KnifeReturnPoint";
                 lockMarker.transform.position = new Vector3(lockPoint.x, 0.02f, lockPoint.z);
                 lockMarker.transform.localScale = new Vector3(1.4f, 0.01f, 1.4f);
-                lockMarker.GetComponent<Renderer>().sharedMaterial = GameManager.Instance.FxMat(new Color(1f, 0.3f, 0.25f, 0.45f));
+                lockMarker.GetComponent<Renderer>().sharedMaterial =
+                    GameManager.Instance.FxMat(new Color(1f, 0.3f, 0.25f, 0.45f));
             }
         }
 

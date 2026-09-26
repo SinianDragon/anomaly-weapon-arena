@@ -5,8 +5,9 @@ using UnityEngine.InputSystem;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 中文文字界面（IMGUI，沿用上个版本的面板样式和思源黑体子集字体）：
-    /// 左上生命 / 波次 / 剩余敌人，底部当前武器与次数，地上武器名字，敌人头顶血条，换装提示，揭晓横幅，结束画面。
+    /// 英文文字界面（IMGUI，Unity 自带字体）：
+    /// 左上生命 / 波次 / 剩余敌人，底部当前武器与次数（蓄力时显示蓄力条），地上武器名字，敌人头顶血条，换装提示，
+    /// 揭晓横幅，结束画面；标题画面有 START 和白盒 / 美术版切换按钮。
     /// </summary>
     public class Hud : MonoBehaviour
     {
@@ -22,9 +23,23 @@ namespace AnomalyArena
             public float t, life;
         }
 
+        /// <summary>飘字：受击处冒出的伤害数字，往上飘、刚出现时放大一下再缩回。</summary>
+        class DamageNum
+        {
+            public Vector3 world;
+            public string text;
+            public Color color;
+            public int size;
+            public float t;
+        }
+
+        // 飘字存活秒数（真实时间，顿帧时也照常飘）
+        const float DamageNumLife = 0.8f;
+
         GUIStyle style;
         float u;
         readonly List<Msg> msgs = new List<Msg>();
+        readonly List<DamageNum> nums = new List<DamageNum>();
         string revealTitle, revealDesc;
         float revealT;
         string bannerTitle, bannerSub;
@@ -42,7 +57,7 @@ namespace AnomalyArena
 
         public void Reveal(Weapon w)
         {
-            revealTitle = $"揭晓：这把{Weapon.TypeName(w.type)}是「{w.Effect.displayName}」";
+            revealTitle = $"Revealed: this {Weapon.TypeName(w.type)} is \"{w.Effect.displayName}\"";
             revealDesc = w.Effect.description;
             revealT = 3.5f;
         }
@@ -56,8 +71,28 @@ namespace AnomalyArena
 
         public void FlashDamage() => damageFlash = 1f;
 
+        /// <summary>在 world 处冒一个伤害数字；heavy 时字更大。</summary>
+        public void DamageNumber(Vector3 world, float amount, Color c, bool heavy)
+        {
+            // 同一位置附近随机错开一点，连续几下不会叠成一个
+            Vector2 jitter = Random.insideUnitCircle * 0.4f;
+            nums.Add(new DamageNum
+            {
+                world = world + new Vector3(jitter.x, 0f, jitter.y),
+                text = $"-{Mathf.RoundToInt(amount)}",
+                color = c,
+                size = heavy ? 34 : 24,
+            });
+        }
+
         void Update()
         {
+            for (int i = nums.Count - 1; i >= 0; i--)
+            {
+                nums[i].t += Time.unscaledDeltaTime;
+                if (nums[i].t >= DamageNumLife) nums.RemoveAt(i);
+            }
+
             float dt = Time.deltaTime;
             revealT -= dt;
             bannerT -= dt;
@@ -72,7 +107,9 @@ namespace AnomalyArena
         void OnGUI()
         {
             if (GM == null) return;
-            if (style == null) style = new GUIStyle { font = GM.uiFont, wordWrap = false };
+            if (style == null)
+                style = new GUIStyle
+                    { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), wordWrap = false };
             u = Screen.height / 900f;
 
             WorldLabels();
@@ -81,12 +118,14 @@ namespace AnomalyArena
                 DrawTitle();
                 return;
             }
+
             DrawStatus();
             DrawWeapon();
             DrawCenter();
             if (GM.State == GameState.Won || GM.State == GameState.Lost) DrawEnd();
             else DrawReticle();
-            if (damageFlash > 0f) Box(new Rect(0, 0, Screen.width, Screen.height), new Color(1f, 0f, 0f, 0.15f * damageFlash));
+            if (damageFlash > 0f)
+                Box(new Rect(0, 0, Screen.width, Screen.height), new Color(1f, 0f, 0f, 0.15f * damageFlash));
         }
 
         // ───── 场景内标签 ─────
@@ -97,21 +136,35 @@ namespace AnomalyArena
             if (cam == null) return;
             foreach (var w in GM.weapons.ground)
             {
-                if (!w || !ToScreen(cam, w.transform.position + Vector3.up * 1.4f, out var sp)) continue;
-                string s = w.Revealed ? $"{w.Label} ×{w.UsesLeft}" : w.Label;
+                // 标签放在武器贴图上方（底边对齐锚点），深色底板，不压住武器
+                if (!w || !ToScreen(cam, w.LabelPoint(cam), out var sp)) continue;
+                string s = w.Revealed ? $"{w.Label} x{w.UsesLeft}" : w.Label;
                 var size = Measure(s, 15);
-                var r = new Rect(sp.x - size.x * 0.5f - 7 * u, sp.y - 13 * u, size.x + 14 * u, 26 * u);
-                Box(r, new Color(0f, 0f, 0f, 0.55f));
+                var r = new Rect(sp.x - size.x * 0.5f - 7 * u, sp.y - 26 * u, size.x + 14 * u, 24 * u);
+                Box(r, new Color(0.03f, 0.04f, 0.06f, 0.85f));
                 Text(r, s, 15, w.Revealed ? TextWeapon : Color.white, TextAnchor.MiddleCenter);
             }
+
             foreach (var e in GM.waves.Alive)
             {
                 if (!e || !e.IsAlive) continue;
-                if (!ToScreen(cam, e.Position + Vector3.up * (e.radius * 2f + 0.6f), out var sp)) continue;
+                if (!ToScreen(cam, e.HeadPoint(cam), out var sp)) continue;
                 float wd = (e.IsLarge ? 70 : 38) * u, h = 6 * u;
                 var r = new Rect(sp.x - wd * 0.5f, sp.y, wd, h);
                 Box(r, new Color(0f, 0f, 0f, 0.6f));
                 Box(new Rect(r.x, r.y, wd * Mathf.Clamp01(e.Hp / e.maxHp), h), new Color(1f, 0.35f, 0.3f));
+            }
+
+            foreach (var n in nums)
+            {
+                float k = n.t / DamageNumLife;
+                if (!ToScreen(cam, n.world + cam.transform.up * (0.6f + k * 1.6f), out var sp)) continue;
+                float pop = 1f + 0.6f * Mathf.Clamp01(1f - n.t / 0.12f); // 刚出现时大 60%，0.12 秒缩回
+                var c = n.color;
+                c.a = 1f - k * k;
+                int size = Mathf.RoundToInt(n.size * pop);
+                Text(new Rect(sp.x - 100 * u, sp.y - 30 * u, 200 * u, 60 * u), n.text, size, c,
+                    TextAnchor.MiddleCenter);
             }
         }
 
@@ -132,23 +185,29 @@ namespace AnomalyArena
             Box(panel, new Color(0.05f, 0.07f, 0.1f, 0.72f));
             float x = panel.x + 14 * u, y = panel.y + 10 * u, w = panel.width - 28 * u;
 
-            Text(new Rect(x, y, w, 24 * u), $"生命  {Mathf.CeilToInt(p.Hp)} / {Mathf.RoundToInt(p.maxHp)}", 17, Color.white, TextAnchor.MiddleLeft);
+            Text(new Rect(x, y, w, 24 * u), $"HP  {Mathf.CeilToInt(p.Hp)} / {Mathf.RoundToInt(p.maxHp)}", 17,
+                Color.white, TextAnchor.MiddleLeft);
             var bar = new Rect(x, y + 28 * u, w, 12 * u);
             Box(bar, new Color(1f, 1f, 1f, 0.12f));
             float k = Mathf.Clamp01(p.Hp / p.maxHp);
-            Box(new Rect(bar.x, bar.y, bar.width * k, bar.height), Color.Lerp(new Color(0.9f, 0.25f, 0.2f), new Color(0.35f, 0.8f, 0.45f), k));
+            Box(new Rect(bar.x, bar.y, bar.width * k, bar.height),
+                Color.Lerp(new Color(0.9f, 0.25f, 0.2f), new Color(0.35f, 0.8f, 0.45f), k));
 
-            Text(new Rect(x, y + 50 * u, w, 26 * u), $"第 {Mathf.Max(1, wv.WaveIndex + 1)} / {wv.WaveCount} 波", 17, Color.white, TextAnchor.MiddleLeft);
-            string right = wv.BetweenWaves ? $"下一波 {Mathf.CeilToInt(wv.BetweenTimer)} 秒" : $"本波剩余 {wv.Remaining}";
+            Text(new Rect(x, y + 50 * u, w, 26 * u), $"Wave {Mathf.Max(1, wv.WaveIndex + 1)} / {wv.WaveCount}", 17,
+                Color.white, TextAnchor.MiddleLeft);
+            string right = wv.BetweenWaves
+                ? $"Next wave in {Mathf.CeilToInt(wv.BetweenTimer)}s"
+                : $"Enemies left: {wv.Remaining}";
             Text(new Rect(x, y + 50 * u, w, 26 * u), right, 17, TextBad, TextAnchor.MiddleRight);
-            Text(new Rect(x, y + 78 * u, w, 22 * u), $"击杀 {wv.Kills}    用时 {GM.Elapsed:0}s", 14, TextDim, TextAnchor.MiddleLeft);
+            Text(new Rect(x, y + 78 * u, w, 22 * u), $"Kills {wv.Kills}    Time {GM.Elapsed:0}s", 14, TextDim,
+                TextAnchor.MiddleLeft);
         }
 
         void DrawWeapon()
         {
             var p = GM.player;
             var w = p.Weapon;
-            float pw = 560 * u, ph = 86 * u;
+            float pw = 600 * u, ph = 86 * u;
             var panel = new Rect((Screen.width - pw) * 0.5f, Screen.height - ph - 18 * u, pw, ph);
             Box(panel, new Color(0.05f, 0.07f, 0.1f, 0.72f));
             var inner = new Rect(panel.x + 16 * u, panel.y + 10 * u, panel.width - 32 * u, 30 * u);
@@ -156,26 +215,44 @@ namespace AnomalyArena
 
             if (w == null)
             {
-                Text(inner, "徒手", 20, Color.white, TextAnchor.MiddleLeft);
-                Text(line2, "左键出拳：伤害 3，能把敌人打退。走到武器上自动拾取。", 14, TextDim, TextAnchor.MiddleLeft);
+                Text(inner, "Bare hands", 20, Color.white, TextAnchor.MiddleLeft);
+                Text(line2, "Left click to punch: 3 damage, knocks enemies back. Walk over a weapon to pick it up.", 14,
+                    TextDim, TextAnchor.MiddleLeft);
             }
             else
             {
                 Text(inner, w.Label, 20, w.Revealed ? TextWeapon : Color.white, TextAnchor.MiddleLeft);
-                Text(inner, $"剩余 {w.UsesLeft}/{w.MaxUses}", 20, w.UsesLeft > 0 ? Color.white : TextBad, TextAnchor.MiddleRight);
-                string desc;
-                if (p.HeldShield != null) desc = "已钩住敌人：左键朝瞄准方向扔出去（可以扔进缺口）";
-                else if (!w.Revealed) desc = "未知效果——左键使用后揭晓";
-                else desc = w.Effect.description;
-                Text(line2, desc, 14, p.HeldShield != null ? TextGood : TextDim, TextAnchor.MiddleLeft);
+                Text(inner, $"Uses {w.UsesLeft}/{w.MaxUses}", 20, w.UsesLeft > 0 ? Color.white : TextBad,
+                    TextAnchor.MiddleRight);
+                if (w.Active is SwingCharge charge)
+                {
+                    // 蓄力条：满了闪烁
+                    float c = charge.Charge01;
+                    var bar = new Rect(line2.x, line2.y + 8 * u, line2.width * 0.55f, 12 * u);
+                    Box(bar, new Color(1f, 1f, 1f, 0.12f));
+                    float blink = c >= 1f ? 0.6f + 0.4f * Mathf.Sin(Time.time * 25f) : 1f;
+                    Box(new Rect(bar.x, bar.y, bar.width * c, bar.height), new Color(1f, 0.75f, 0.2f, blink));
+                    Text(new Rect(bar.xMax + 12 * u, line2.y, line2.width * 0.45f - 12 * u, line2.height),
+                        c >= 1f ? "FULL - release to swing!" : "Charging... release to swing", 14, TextWeapon,
+                        TextAnchor.MiddleLeft);
+                }
+                else
+                {
+                    string desc;
+                    if (p.HeldShield != null) desc = "Enemy hooked: left click to throw it where you aim (try a gap!)";
+                    else if (!w.Revealed) desc = "Unknown effect - use it (left click) to find out";
+                    else desc = w.Effect.description;
+                    Text(line2, desc, 14, p.HeldShield != null ? TextGood : TextDim, TextAnchor.MiddleLeft);
+                }
             }
 
             // 已装备时站在武器上，提示右键才会换装
             if (w != null && p.NearPickup != null && GM.State == GameState.Playing)
             {
-                var hint = new Rect((Screen.width - 460 * u) * 0.5f, panel.y - 42 * u, 460 * u, 34 * u);
+                var hint = new Rect((Screen.width - 520 * u) * 0.5f, panel.y - 42 * u, 520 * u, 34 * u);
                 Box(hint, new Color(0.85f, 0.65f, 0.15f, 0.9f));
-                Text(hint, $"右键换装：{p.NearPickup.Label}（当前武器留在地上）", 16, new Color(0.1f, 0.08f, 0.02f), TextAnchor.MiddleCenter);
+                Text(hint, $"Right click to swap for {p.NearPickup.Label} (current weapon stays here)", 16,
+                    new Color(0.1f, 0.08f, 0.02f), TextAnchor.MiddleCenter);
             }
         }
 
@@ -185,23 +262,34 @@ namespace AnomalyArena
             if (bannerT > 0f)
             {
                 float a = Mathf.Clamp01(bannerT / 0.4f);
-                Text(new Rect(0, y, Screen.width, 56 * u), bannerTitle, 40, new Color(1f, 1f, 1f, a), TextAnchor.MiddleCenter);
-                Text(new Rect(0, y + 54 * u, Screen.width, 28 * u), bannerSub, 17, new Color(0.85f, 0.88f, 0.92f, a), TextAnchor.MiddleCenter);
+                // 深色横条垫底：在花哨的地面上也看得清
+                Box(new Rect(0, y - 6 * u, Screen.width, 92 * u), new Color(0.03f, 0.04f, 0.06f, 0.6f * a));
+                Text(new Rect(0, y, Screen.width, 56 * u), bannerTitle, 40, new Color(1f, 1f, 1f, a),
+                    TextAnchor.MiddleCenter);
+                Text(new Rect(0, y + 54 * u, Screen.width, 28 * u), bannerSub, 17, new Color(0.85f, 0.88f, 0.92f, a),
+                    TextAnchor.MiddleCenter);
                 y += 96 * u;
             }
+
             if (revealT > 0f)
             {
                 float a = Mathf.Clamp01(revealT / 0.5f);
-                var r = new Rect((Screen.width - 720 * u) * 0.5f, y, 720 * u, 76 * u);
+                var r = new Rect((Screen.width - 760 * u) * 0.5f, y, 760 * u, 76 * u);
                 Box(r, new Color(0.08f, 0.06f, 0.02f, 0.8f * a));
-                Text(new Rect(r.x, r.y + 6 * u, r.width, 34 * u), revealTitle, 24, new Color(1f, 0.85f, 0.4f, a), TextAnchor.MiddleCenter);
-                Text(new Rect(r.x + 12 * u, r.y + 40 * u, r.width - 24 * u, 28 * u), revealDesc, 15, new Color(1f, 1f, 1f, a), TextAnchor.MiddleCenter);
+                Text(new Rect(r.x, r.y + 6 * u, r.width, 34 * u), revealTitle, 24, new Color(1f, 0.85f, 0.4f, a),
+                    TextAnchor.MiddleCenter);
+                Text(new Rect(r.x + 12 * u, r.y + 40 * u, r.width - 24 * u, 28 * u), revealDesc, 15,
+                    new Color(1f, 1f, 1f, a), TextAnchor.MiddleCenter);
                 y += 86 * u;
             }
+
             foreach (var m in msgs)
             {
                 var c = m.color;
                 c.a = Mathf.Clamp01((m.life - m.t) / 0.4f);
+                float tw = Measure(m.text, 18).x + 24 * u;
+                Box(new Rect((Screen.width - tw) * 0.5f, y + 1 * u, tw, 26 * u),
+                    new Color(0.03f, 0.04f, 0.06f, 0.7f * c.a));
                 Text(new Rect(0, y, Screen.width, 28 * u), m.text, 18, c, TextAnchor.MiddleCenter);
                 y += 28 * u;
             }
@@ -210,27 +298,42 @@ namespace AnomalyArena
         void DrawTitle()
         {
             Box(new Rect(0, 0, Screen.width, Screen.height), new Color(0.03f, 0.04f, 0.06f, 0.72f));
-            float cy = Screen.height * 0.2f;
-            Text(new Rect(0, cy, Screen.width, 80 * u), "反常武器竞技场", 56, Color.white, TextAnchor.MiddleCenter);
-            Text(new Rect(0, cy + 84 * u, Screen.width, 30 * u), "武器的外形很熟悉，功能要第一次用了才知道。清空三波敌人，或者把它们打进缺口。", 18, TextDim, TextAnchor.MiddleCenter);
+            float cy = Screen.height * 0.16f;
+            Text(new Rect(0, cy, Screen.width, 80 * u), "ANOMALY WEAPON ARENA", 56, Color.white,
+                TextAnchor.MiddleCenter);
+            Text(new Rect(0, cy + 84 * u, Screen.width, 30 * u),
+                "Every weapon looks familiar - you only learn what it really does when you use it. Clear 3 waves, or knock them into the gaps.",
+                17, TextDim, TextAnchor.MiddleCenter);
 
             string[] lines =
             {
-                "W A S D  移动　　鼠标  瞄准　　左键  攻击 / 投掷（空手时出拳）",
-                "空手走到武器上自动拾取　　持有武器时站在武器上按右键换装",
-                "每把武器次数有限；同一把武器的效果揭晓后固定不变",
-                "每种效果都可能伤到你自己；生命耗尽，或掉进缺口，都算失败",
+                "WASD  move      Mouse  aim      Left click  attack / throw (punch when empty-handed)",
+                "Walk over a weapon to pick it up; while armed, stand on one and right click to swap",
+                "Weapons have limited uses; once revealed, a weapon's effect never changes",
+                "Every effect can hurt you too. You lose if your HP hits 0 or you fall into a gap",
+                "Enemies flash yellow right before they punch - step away to dodge",
             };
             float y = cy + 150 * u;
-            var panel = new Rect((Screen.width - 680 * u) * 0.5f, y - 14 * u, 680 * u, lines.Length * 34 * u + 28 * u);
+            var panel = new Rect((Screen.width - 780 * u) * 0.5f, y - 14 * u, 780 * u, lines.Length * 34 * u + 28 * u);
             Box(panel, new Color(1f, 1f, 1f, 0.06f));
             foreach (var l in lines)
             {
-                Text(new Rect(0, y, Screen.width, 30 * u), l, 17, Color.white, TextAnchor.MiddleCenter);
+                Text(new Rect(0, y, Screen.width, 30 * u), l, 16, Color.white, TextAnchor.MiddleCenter);
                 y += 34 * u;
             }
-            float blink = 0.55f + 0.45f * Mathf.Sin(Time.time * 4f);
-            Text(new Rect(0, y + 40 * u, Screen.width, 40 * u), "点击左键 或 按空格 开始", 24, new Color(1f, 0.85f, 0.4f, blink), TextAnchor.MiddleCenter);
+
+            // 两个按钮：开局、切换白盒 / 美术版（切换会重新加载场景）
+            y += 36 * u;
+            float bw = 260 * u, bh = 54 * u, gap = 24 * u;
+            var start = new Rect(Screen.width * 0.5f - bw - gap * 0.5f, y, bw, bh);
+            var art = new Rect(Screen.width * 0.5f + gap * 0.5f, y, bw, bh);
+            float blink = 0.75f + 0.25f * Mathf.Sin(Time.time * 4f);
+            if (Button(start, "START", new Color(0.85f, 0.65f, 0.15f, blink), new Color(0.1f, 0.08f, 0.02f)))
+                GM.BeginPlaying();
+            string artLabel = Art.Enabled ? "ART: ILLUSTRATED" : "ART: WHITEBOX";
+            if (Button(art, artLabel, new Color(0.25f, 0.45f, 0.8f, 0.95f), Color.white)) GM.ToggleArt();
+            Text(new Rect(0, y + bh + 10 * u, Screen.width, 26 * u),
+                "Space = start      T = switch art (whitebox <-> illustrated)", 15, TextDim, TextAnchor.MiddleCenter);
         }
 
         void DrawEnd()
@@ -238,12 +341,15 @@ namespace AnomalyArena
             bool won = GM.State == GameState.Won;
             Box(new Rect(0, 0, Screen.width, Screen.height), new Color(0.02f, 0.03f, 0.05f, 0.55f));
             float cy = Screen.height * 0.34f;
-            string title = won ? "胜利" : GM.LoseCause == DeathCause.FellIntoGap ? "失败 · 掉进缺口" : "失败 · 生命归零";
+            string title = won ? "VICTORY" :
+                GM.LoseCause == DeathCause.FellIntoGap ? "DEFEAT - Fell into a gap" : "DEFEAT - Out of HP";
             Text(new Rect(0, cy, Screen.width, 70 * u), title, 54, won ? TextGood : TextBad, TextAnchor.MiddleCenter);
-            string sub = won ? "三波敌人全部清除" : $"到达第 {Mathf.Max(1, GM.waves.WaveIndex + 1)} 波";
+            string sub = won ? "All three waves cleared" : $"Reached wave {Mathf.Max(1, GM.waves.WaveIndex + 1)}";
             Text(new Rect(0, cy + 72 * u, Screen.width, 32 * u), sub, 20, Color.white, TextAnchor.MiddleCenter);
-            Text(new Rect(0, cy + 108 * u, Screen.width, 28 * u), $"击杀 {GM.waves.Kills} · 用时 {GM.Elapsed:0} 秒", 16, TextDim, TextAnchor.MiddleCenter);
-            Text(new Rect(0, cy + 160 * u, Screen.width, 34 * u), "按 R 重开", 22, new Color(1f, 0.85f, 0.4f), TextAnchor.MiddleCenter);
+            Text(new Rect(0, cy + 108 * u, Screen.width, 28 * u), $"Kills {GM.waves.Kills} · Time {GM.Elapsed:0}s", 16,
+                TextDim, TextAnchor.MiddleCenter);
+            Text(new Rect(0, cy + 160 * u, Screen.width, 34 * u), "Press R to restart", 22, new Color(1f, 0.85f, 0.4f),
+                TextAnchor.MiddleCenter);
         }
 
         void DrawReticle()
@@ -260,6 +366,14 @@ namespace AnomalyArena
         }
 
         // ───── 绘制工具 ─────
+
+        bool Button(Rect r, string label, Color bg, Color fg)
+        {
+            bool hover = r.Contains(Event.current.mousePosition);
+            Box(r, hover ? Color.Lerp(bg, Color.white, 0.2f) : bg);
+            Text(r, label, 22, fg, TextAnchor.MiddleCenter);
+            return GUI.Button(r, GUIContent.none, GUIStyle.none);
+        }
 
         static void Box(Rect r, Color c)
         {

@@ -71,7 +71,7 @@ namespace AnomalyArena
                 (queue[k], queue[j]) = (queue[j], queue[k]);
             }
             spawnTimer = 0.5f;
-            GM.hud.Banner($"第 {i + 1} 波", i == waves.Length - 1 ? "最后一波！" : $"共 {queue.Count} 名敌人");
+            GM.hud.Banner($"Wave {i + 1}", i == waves.Length - 1 ? "Final wave!" : $"{queue.Count} enemies incoming");
         }
 
         void Update()
@@ -144,10 +144,10 @@ namespace AnomalyArena
             // 切波不重置场上状态：飞行中的子弹 / 飞刀 / 导弹、钩子、冲刺都继续，玩家照常移动
             float before = GM.player.Hp;
             GM.player.Heal(refillHpEachWave ? GM.player.maxHp : waveHeal);
-            GM.weapons.SpawnRandom(GM.weapons.perWave);
+            GM.weapons.SpawnForWave(WaveIndex + 1); // 下一波的补给：第 2 波 5 把、第 3 波 8 把
             BetweenWaves = true;
             BetweenTimer = betweenWaveDelay;
-            GM.hud.Banner($"第 {WaveIndex + 1} 波 清除！", refillHpEachWave ? "生命已回满" : $"生命 +{Mathf.RoundToInt(GM.player.Hp - before)}");
+            GM.hud.Banner($"Wave {WaveIndex + 1} cleared!", refillHpEachWave ? "HP fully restored" : $"HP +{Mathf.RoundToInt(GM.player.Hp - before)}");
         }
 
         Vector3 FindSpawnPoint(bool large)

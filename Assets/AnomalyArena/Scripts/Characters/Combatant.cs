@@ -67,6 +67,138 @@ namespace AnomalyArena
             Hp = maxHp;
         }
 
+        // ───── 美术版 ─────
+
+        /// <summary>美术版的立牌（白盒版为空）。</summary>
+        protected Transform artPivot;
+        protected Renderer artSprite;
+        protected virtual Texture2D ArtTexture => null;
+        protected virtual float ArtHeight => 2f;
+
+        /// <summary>头顶的位置（血条放这里）：美术版是立牌顶，沿镜头上方算。</summary>
+        public Vector3 HeadPoint(Camera cam)
+        {
+            if (artPivot && cam) return artPivot.position + cam.transform.up * (ArtHeight + 0.15f);
+            return Position + Vector3.up * (radius * 2f + 0.6f);
+        }
+
+        protected virtual void Start()
+        {
+            if (Art.On && ArtTexture != null)
+            {
+                Art.HideWhitebox(gameObject);
+                artPivot = Art.Billboard(transform, ArtTexture, ArtHeight, Art.OrderCharacter, out artSprite);
+            }
+            squashTarget = artPivot ? artPivot : bodyRenderer ? bodyRenderer.transform : null;
+            if (squashTarget) squashBase = squashTarget.localScale;
+        }
+
+        // ───── 受击反馈 ─────
+
+        // 压扁回弹的时长（秒，真实时间）
+        const float SquashTime = 0.15f;
+        // 美术版闪白：Unlit 是“贴图 × 颜色”，颜色调到远大于 1 才会饱和成接近纯白（黑描边保持黑）
+        static readonly Color ArtFlashColor = new Color(6f, 6f, 6f, 1f);
+        static MaterialPropertyBlock flashBlock;
+
+        float flashTimer;
+        float squashTimer;
+        bool flashing;
+        Transform squashTarget;
+        Vector3 squashBase;
+
+        static Color HitColor(HitKind kind) => kind switch
+        {
+            HitKind.Bullet => new Color(1f, 0.95f, 0.45f),
+            HitKind.Pierce => new Color(0.7f, 0.95f, 1f),
+            HitKind.Slam => new Color(0.95f, 0.9f, 0.8f),
+            HitKind.Blast => new Color(1f, 0.5f, 0.15f),
+            _ => new Color(1f, 0.8f, 0.35f),
+        };
+
+        /// <summary>
+        /// 受击反馈：闪白、压扁回弹、朝受击方向飞溅的碎片、冲击环、伤害飘字；
+        /// 玩家挨打、重击、撞墙、爆炸再加顿帧和震屏。所有扣血路径（攻击、撞墙、被人形导弹撞死）都走这里。
+        /// </summary>
+        void PlayHitFeedback(float amount, Vector3 dir, HitKind kind)
+        {
+            var fb = GM.feedback;
+            bool heavy = amount >= fb.heavyDamage || kind == HitKind.Slam || kind == HitKind.Blast;
+            bool isPlayer = Team == Team.Player;
+            flashTimer = fb.flashTime;
+            squashTimer = SquashTime;
+
+            Vector3 at = Query.AtCastHeight(Position);
+            Color c = HitColor(kind);
+            float size = Mathf.Max(0.12f, radius * 0.3f);
+            // 子弹、穿透：窄而快的一束；钝击：宽扇形；撞击、爆炸：全向
+            var (count, speed, spread) = kind switch
+            {
+                HitKind.Bullet => (9, 12f, 50f),
+                HitKind.Pierce => (10, 15f, 30f),
+                HitKind.Slam => (14, 8f, 360f),
+                HitKind.Blast => (16, 10f, 360f),
+                _ => (heavy ? 14 : 9, heavy ? 11f : 8f, 120f),
+            };
+            Fx.Burst(at, spread >= 360f ? Vector3.zero : dir, c, count, speed, spread, size);
+            Fx.Pop(at, c, radius * (heavy ? 3.5f : 2.5f));
+            if (heavy) Fx.Ring(Position, radius + 2.5f, c);
+
+            GM.hud.DamageNumber(Position, amount, isPlayer ? new Color(1f, 0.3f, 0.25f) : new Color(1f, 0.95f, 0.6f), heavy || isPlayer);
+            if (isPlayer)
+            {
+                GM.HitStop(fb.heavyHitStop);
+                GM.Shake(fb.playerHitShake);
+            }
+            else
+            {
+                GM.HitStop(heavy ? fb.heavyHitStop : fb.hitStop);
+                if (heavy) GM.Shake(fb.heavyShake);
+            }
+        }
+
+        /// <summary>闪白和压扁只改外观，放在 LateUpdate：所有移动、状态都算完之后再覆盖缩放和颜色。</summary>
+        void LateUpdate()
+        {
+            // 用真实时间：顿帧期间闪白和压扁照样播放，正好是“定格一下”的效果
+            float dt = Time.unscaledDeltaTime;
+            if (flashTimer > 0f || flashing)
+            {
+                flashTimer -= dt;
+                SetFlash(flashTimer > 0f && IsAlive);
+            }
+            if (squashTimer > 0f && squashTarget && IsAlive)
+            {
+                squashTimer = Mathf.Max(0f, squashTimer - dt);
+                float s = GM.feedback.squash * (squashTimer / SquashTime);
+                // 立牌：横向变宽、纵向变矮；白盒胶囊：水平两轴变宽、高度变矮
+                squashTarget.localScale = artPivot
+                    ? Vector3.Scale(squashBase, new Vector3(1f + s, 1f - s, 1f))
+                    : Vector3.Scale(squashBase, new Vector3(1f + s, 1f - s, 1f + s));
+            }
+        }
+
+        void SetFlash(bool on)
+        {
+            if (on == flashing) return;
+            flashing = on;
+            if (artSprite)
+            {
+                Art.Tint(artSprite, on ? ArtFlashColor : Color.white);
+            }
+            else if (bodyRenderer)
+            {
+                // 白盒用 PropertyBlock 盖掉颜色：不改共享材质，敌人蓄力时换的黄色材质也不受影响
+                if (on)
+                {
+                    flashBlock ??= new MaterialPropertyBlock();
+                    flashBlock.SetColor("_BaseColor", Color.white);
+                    bodyRenderer.SetPropertyBlock(flashBlock);
+                }
+                else bodyRenderer.SetPropertyBlock(null);
+            }
+        }
+
         // ───── 状态机 ─────
 
         public void SetState(CharacterState s)
@@ -177,15 +309,17 @@ namespace AnomalyArena
                 bool damage = knockKind != KnockKind.Push;
                 SetState(CharacterState.Normal);
                 rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-                if (damage) TakeWallDamage();
+                if (damage) TakeWallDamage(-to.normalized);
                 return;
             }
         }
 
-        void TakeWallDamage()
+        /// <param name="away">背离墙的方向：碎片朝这边溅</param>
+        void TakeWallDamage(Vector3 away)
         {
             if (!IsAlive) return;
             Hp -= GM.rules.wallDamage;
+            PlayHitFeedback(GM.rules.wallDamage, away, HitKind.Slam);
             OnDamaged(GM.rules.wallDamage);
             if (Hp <= 0f) Die(DeathCause.HpDepleted);
         }
@@ -198,6 +332,7 @@ namespace AnomalyArena
             if (info.isAttack && (Protected || State == CharacterState.Dashing)) return false;
             Hp -= info.amount;
             if (info.isAttack && protectionTime > 0f) protectTimer = protectionTime;
+            PlayHitFeedback(info.amount, info.knockDir, info.kind);
             OnDamaged(info.amount);
             if (Hp <= 0f)
             {
@@ -211,9 +346,11 @@ namespace AnomalyArena
 
         public void Heal(float amount) => Hp = Mathf.Min(maxHp, Hp + amount);
 
+        /// <summary>直接死亡（被人形导弹撞到，大型也算）。按剩余血量播一次穿透受击特效。</summary>
         public void Kill()
         {
             if (!IsAlive) return;
+            PlayHitFeedback(Mathf.Max(Hp, GM.feedback.heavyDamage), Vector3.zero, HitKind.Pierce);
             Hp = 0f;
             Die(DeathCause.HpDepleted);
         }
@@ -260,6 +397,12 @@ namespace AnomalyArena
         {
             Weapon = w;
             w.AttachTo(this, hand ? hand : transform);
+        }
+
+        /// <summary>松开左键：交给进行中的流程（蓄力挥砍在这时挥出）。</summary>
+        public void ReleaseWeapon()
+        {
+            if (Weapon != null && Weapon.Active != null) Weapon.Active.OnUseReleased();
         }
 
         public Weapon Unequip()

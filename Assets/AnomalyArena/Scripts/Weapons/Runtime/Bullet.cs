@@ -29,16 +29,18 @@ namespace AnomalyArena
                 Destroy(gameObject);
                 return;
             }
+
             pos = next;
             traveled += step;
             transform.position = pos;
             foreach (var c in Query.Characters(pos, 0.25f))
             {
                 if ((IWeaponHolder)c == Owner || !c.IsAlive) continue;
-                c.ReceiveDamage(DamageInfo.Attack(cfg.damage, this));
+                c.ReceiveDamage(DamageInfo.Attack(cfg.damage, this, dir, 0f, HitKind.Bullet));
                 Destroy(gameObject);
                 return;
             }
+
             if (traveled >= cfg.bulletRange) Destroy(gameObject);
         }
     }

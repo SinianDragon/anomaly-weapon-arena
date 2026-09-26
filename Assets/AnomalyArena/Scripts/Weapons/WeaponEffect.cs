@@ -42,6 +42,9 @@ namespace AnomalyArena
         /// <summary>流程中再按左键（钩子：投掷）。</summary>
         public virtual void OnUsePressed() { }
 
+        /// <summary>流程中松开左键（蓄力挥砍：挥出）。</summary>
+        public virtual void OnUseReleased() { }
+
         /// <summary>流程中按右键换武器（钩子：先自动扔出去）。</summary>
         public virtual void OnSwapAway() { }
 
@@ -83,7 +86,7 @@ namespace AnomalyArena
         }
 
         /// <summary>白盒阶段也要看得出往哪飞：拖一条线。</summary>
-        protected void AddTrail(Color c, float width)
+        protected TrailRenderer AddTrail(Color c, float width)
         {
             var tr = gameObject.AddComponent<TrailRenderer>();
             tr.time = 0.35f;
@@ -91,6 +94,7 @@ namespace AnomalyArena
             tr.endWidth = 0f;
             tr.sharedMaterial = GameManager.Instance.FxMat(c);
             tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return tr;
         }
     }
 }

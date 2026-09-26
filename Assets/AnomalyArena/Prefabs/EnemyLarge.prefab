@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 4007952652245719623}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.3499999, y: 1.3499999, z: 0.90000004}
+  m_LocalPosition: {x: 0.9, y: 1.8, z: 0.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -58,8 +58,8 @@ Transform:
   m_GameObject: {fileID: 5045611546977172343}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.5, z: 0}
-  m_LocalScale: {x: 3, y: 1.5, z: 3}
+  m_LocalPosition: {x: 0, y: 2, z: 0}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8325571694733171525}
@@ -148,8 +148,8 @@ Transform:
   m_GameObject: {fileID: 5288458924173421785}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.16, z: 1.5}
-  m_LocalScale: {x: 0.6, y: 0.6, z: 0.6}
+  m_LocalPosition: {x: 0, y: 2.88, z: 1}
+  m_LocalScale: {x: 0.4, y: 0.4, z: 0.4}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8325571694733171525}
@@ -294,10 +294,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 1.5
-  m_Height: 3
+  m_Radius: 1
+  m_Height: 4
   m_Direction: 1
-  m_Center: {x: 0, y: 1.5, z: 0}
+  m_Center: {x: 0, y: 2, z: 0}
 --- !u!114 &7560221289357279801
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -312,15 +312,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AnomalyArena.Enemy
   maxHp: 30
   moveSpeed: 3.6000001
-  radius: 1.5
+  radius: 1
   knockbackScale: 0.5
   protectionTime: 0
   bodyRenderer: {fileID: 7353075480108458647}
   hand: {fileID: 1631639656074469536}
   attackDamage: 15
-  attackRange: 2
+  triggerRange: 0.4
+  attackRange: 1
+  attackArc: 120
   windupTime: 0.8
   attackInterval: 2
   attackKnockback: 5
   normalMaterial: {fileID: 2100000, guid: 7a5af3c7a231442d080f655e16b27bf6, type: 2}
   windupMaterial: {fileID: 2100000, guid: 68461a710f0314dbeb3c0ea60ba7f661, type: 2}
+  large: 1

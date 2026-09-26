@@ -5,7 +5,7 @@ using Random = UnityEngine.Random;
 
 namespace AnomalyArena
 {
-    /// <summary>地上的武器：开局放几把、每波后补几把、上限、拾取查找。</summary>
+    /// <summary>地上的武器：每一波开始时补几把（第 1 波在开局放）、上限、拾取查找。</summary>
     public class WeaponSpawner : MonoBehaviour
     {
         [Serializable]
@@ -21,16 +21,21 @@ namespace AnomalyArena
         }
 
         public WeaponDef[] defs;
-        public int startCount = 3;
-        public int perWave = 2;
-        [Tooltip("地上最多同时有几把；满了就不再补")] public int groundCap = 5;
+        [Tooltip("每一波开始时补几把：第 1 波（开局）、第 2 波、第 3 波……波数多于数组时用最后一个")]
+        public int[] perWaveCounts = { 3, 5, 8 };
+        [Tooltip("地上最多同时有几把；满了就不再补")] public int groundCap = 12;
         public float pickupRadius = 1f;
         [Tooltip("击败大型敌人时掉落一把随机武器的概率")] [Range(0f, 1f)] public float largeDropChance = 0.5f;
         [Tooltip("大型敌人的掉落不受地上武器上限限制")] public bool dropIgnoresCap = true;
 
         public readonly List<Weapon> ground = new List<Weapon>();
 
-        public void SpawnInitial() => SpawnRandom(startCount);
+        public void SpawnInitial() => SpawnForWave(0);
+
+        public int CountForWave(int waveIndex) =>
+            perWaveCounts == null || perWaveCounts.Length == 0 ? 0 : perWaveCounts[Mathf.Clamp(waveIndex, 0, perWaveCounts.Length - 1)];
+
+        public void SpawnForWave(int waveIndex) => SpawnRandom(CountForWave(waveIndex));
 
         public void SpawnRandom(int count)
         {
@@ -51,7 +56,7 @@ namespace AnomalyArena
             pos.z = Mathf.Clamp(pos.z, -limit, limit);
             var w = Spawn(defs[Random.Range(0, defs.Length)], pos);
             Fx.Pop(pos + Vector3.up * 0.6f, new Color(0.85f, 0.65f, 0.15f), 2f);
-            GameManager.Instance.hud.Toast("大型敌人掉落了：" + w.Label, new Color(1f, 0.85f, 0.4f));
+            GameManager.Instance.hud.Toast("The big one dropped: " + w.Label, new Color(1f, 0.85f, 0.4f));
         }
 
         public Weapon Spawn(WeaponDef def, Vector3 pos)
