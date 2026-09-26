@@ -14,6 +14,8 @@ namespace AnomalyArena
         public string displayName;
         [TextArea] public string description;
         [Tooltip("两次使用之间的最短间隔")] public float cooldown = 0.3f;
+        [Tooltip("按住左键时按 cooldown 的间隔自动连续使用")] public bool holdToRepeat;
+        [Tooltip("扣一次次数能用几下（弹夹容量）；1 = 每下都扣次")] [Min(1)] public int roundsPerUse = 1;
 
         public abstract void Use(Weapon weapon, IWeaponHolder user);
     }

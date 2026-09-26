@@ -153,13 +153,12 @@ namespace AnomalyArena
         Vector3 FindSpawnPoint(bool large)
         {
             float r = large ? largePrefab.radius : smallPrefab.radius;
-            float limit = GM.rules.arenaHalfSize - r - 0.5f;
             var p = GM.player;
             Vector3 best = Vector3.zero;
             float bestScore = -1f;
             for (int i = 0; i < 50; i++)
             {
-                var pt = new Vector3(Random.Range(-limit, limit), 0f, Random.Range(-limit, limit));
+                var pt = ArenaShape.RandomInside(r + 0.5f);
                 float dp = Query.Flat(pt - p.Position).magnitude;
                 float dOther = 99f;
                 foreach (var m in markers) dOther = Mathf.Min(dOther, Query.Flat(m.Position - pt).magnitude - r);

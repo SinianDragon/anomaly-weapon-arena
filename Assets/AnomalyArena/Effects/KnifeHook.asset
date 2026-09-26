@@ -17,6 +17,8 @@ MonoBehaviour:
   displayName: Hook
   description: The blade extends and hooks the first enemy, pulling it in as a shield; left click again to throw it
   cooldown: 0.2
+  holdToRepeat: 0
+  roundsPerUse: 1
   range: 10
   extendSpeed: 40
   retractSpeed: 60

@@ -15,8 +15,10 @@ MonoBehaviour:
   id: 1
   type: 0
   displayName: Charge Swing
-  description: Hold to charge (you slow down), release to hit the nearest enemy in front. Longer charge = longer reach, more damage, bigger knockback
+  description: Hold to charge (you slow down), release to hit EVERYONE in the arc. Longer charge = wider reach, more damage, bigger knockback
   cooldown: 0.35
+  holdToRepeat: 0
+  roundsPerUse: 1
   minRadius: 2.5
   minArc: 90
   minDamage: 6

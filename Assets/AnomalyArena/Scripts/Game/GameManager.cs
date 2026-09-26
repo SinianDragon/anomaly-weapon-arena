@@ -18,7 +18,6 @@ namespace AnomalyArena
             [Tooltip("被撞飞 / 被扔出去后撞墙扣的血（不受保护影响）")] public float wallDamage = 5f;
             [Tooltip("撞墙那一刻朝墙的速度超过这个值才算撞到（待调）")] public float wallHitSpeed = 3f;
             [Tooltip("撞飞的衰减系数：初速度 = 距离 × 系数")] public float knockDamping = 6f;
-            [Tooltip("平台半边长：30 × 30 → 15")] public float arenaHalfSize = 15f;
         }
 
         /// <summary>受击反馈的手感参数（闪白、压扁、顿帧、震屏）。</summary>

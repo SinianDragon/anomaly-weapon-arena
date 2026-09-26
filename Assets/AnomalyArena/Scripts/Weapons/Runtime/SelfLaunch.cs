@@ -4,7 +4,8 @@ namespace AnomalyArena
 {
     /// <summary>
     /// 人形导弹冲刺。进：使用者进入 Dashing（刚体改为运动学）。
-    /// 出：剩余距离用完 → Normal；中途掉进缺口或死亡 → 直接结束，不改使用者状态。
+    /// 出：剩余距离用完 → Normal；撞墙 → 停在墙前、扣一次墙伤、被弹回 wallBounce（SlamIntoWall）；
+    ///     中途掉进缺口或死亡 → 直接结束，不改使用者状态。
     /// </summary>
     public class SelfLaunch : WeaponRuntime
     {
@@ -47,36 +48,31 @@ namespace AnomalyArena
                 Finish();
                 return;
             }
+
             float step = Mathf.Min(cfg.speed * Time.fixedDeltaTime, remaining);
             remaining -= step;
 
             Vector3 p = user.Position;
             float r = user.Radius;
-            for (int i = 0; i < 4 && step > 1e-4f; i++)
+            // 从身后半个身位开始扫，避免贴墙时扫描起点已在墙内
+            Vector3 origin = Query.AtCastHeight(p) - dir * r;
+            if (Physics.SphereCast(origin, r * 0.95f, dir, out var hit, step + r, GameManager.WallMask,
+                    QueryTriggerInteraction.Ignore))
             {
-                // 从身后半个身位开始扫，避免贴墙时扫描起点已在墙内
-                Vector3 origin = Query.AtCastHeight(p) - dir * r;
-                if (Physics.SphereCast(origin, r * 0.95f, dir, out var hit, step + r, GameManager.WallMask, QueryTriggerInteraction.Ignore))
-                {
-                    float move = Mathf.Max(0f, hit.distance - r - 0.02f);
-                    p += dir * move;
-                    step -= move;
-                    Vector3 n = Query.Flat(hit.normal).normalized;
-                    dir = Vector3.Reflect(dir, n);
-                    dir = Query.Flat(dir).normalized; // 撞墙反弹，不扣墙伤，用剩下的距离继续飞
-                    if (move < 1e-3f) step -= 0.01f;
-                }
-                else
-                {
-                    p += dir * step;
-                    step = 0f;
-                }
+                // 撞墙：停在墙前，扣墙伤并被弹回；冲刺到此结束
+                p += dir * Mathf.Max(0f, hit.distance - r - 0.02f);
+                KillAlong(p, r);
+                Vector3 away = Query.Flat(hit.normal);
+                if (away.sqrMagnitude < 1e-4f) away = -dir;
+                user.SlamIntoWall(new Vector3(p.x, user.Position.y, p.z), away.normalized, cfg.wallBounce);
+                Finish();
+                return;
             }
+
+            p += dir * step;
             user.SetMovePosition(p);
             PlaceFlame(p);
-
-            foreach (var c in Query.Characters(Query.AtCastHeight(p), r + 0.1f))
-                if ((IWeaponHolder)c != user && c.IsAlive) c.Kill(); // 大型也直接死
+            KillAlong(p, r);
 
             trailTimer -= Time.fixedDeltaTime;
             if (trailTimer <= 0f && !flame)
@@ -90,6 +86,14 @@ namespace AnomalyArena
                 user.SetState(CharacterState.Normal);
                 Finish();
             }
+        }
+
+        /// <summary>冲刺路上碰到的人直接死（大型也算）。</summary>
+        void KillAlong(Vector3 p, float r)
+        {
+            foreach (var c in Query.Characters(Query.AtCastHeight(p), r + 0.1f))
+                if ((IWeaponHolder)c != user && c.IsAlive)
+                    c.Kill();
         }
 
         public override void Cancel()

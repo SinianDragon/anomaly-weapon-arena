@@ -107,14 +107,18 @@ namespace AnomalyArena
             return d <= radius + c.Radius * 0.5f || Vector3.Angle(facing, to) <= attackArc * 0.5f;
         }
 
-        /// <summary>自己走路时不会主动走下缺口；只有被撞飞、被扔才会掉下去。</summary>
+        /// <summary>
+        /// 自己走路时不会主动走下缺口；只有被撞飞、被扔才会掉下去。
+        /// 下一步会离开平台（离边不到一个身位）时，先试着只沿 x 或只沿 z 走（贴着边滑），都不行就停下。
+        /// </summary>
         Vector3 KeepOffEdges(Vector3 v, float dt)
         {
-            float limit = GM.rules.arenaHalfSize - radius;
-            Vector3 next = Position + v * dt;
-            if (Mathf.Abs(next.x) > limit && Mathf.Sign(v.x) == Mathf.Sign(next.x)) v.x = 0f;
-            if (Mathf.Abs(next.z) > limit && Mathf.Sign(v.z) == Mathf.Sign(next.z)) v.z = 0f;
-            return v;
+            if (ArenaShape.ContainsWithMargin(Position + v * dt, radius)) return v;
+            var alongX = new Vector3(v.x, 0f, 0f);
+            if (ArenaShape.ContainsWithMargin(Position + alongX * dt, radius)) return alongX;
+            var alongZ = new Vector3(0f, 0f, v.z);
+            if (ArenaShape.ContainsWithMargin(Position + alongZ * dt, radius)) return alongZ;
+            return Vector3.zero;
         }
 
         void Stop() => rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);

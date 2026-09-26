@@ -15,9 +15,11 @@ MonoBehaviour:
   id: 2
   type: 0
   displayName: Reverse Shot
-  description: The bullet fires out of your BACK and the recoil shoves you 3 tiles forward - don't aim at a gap
-  cooldown: 0.3
+  description: Hold to fire. Bullets fly out of your BACK and every shot's recoil nudges you forward - don't aim at a gap. 5 rounds per use
+  cooldown: 0.12
+  holdToRepeat: 1
+  roundsPerUse: 5
   damage: 10
   bulletSpeed: 25
   bulletRange: 40
-  recoilDistance: 3
+  recoilDistance: 0.8

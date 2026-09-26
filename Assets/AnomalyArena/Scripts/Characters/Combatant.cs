@@ -30,6 +30,8 @@ namespace AnomalyArena
 
         protected Rigidbody rb;
         protected Vector3 knockVel;
+        /// <summary>叠加在正常移动上的推力（连发后坐力），按撞飞同样的系数衰减。</summary>
+        Vector3 pushVel;
         protected float weaponCooldown;
         KnockKind knockKind;
         float protectTimer;
@@ -152,8 +154,12 @@ namespace AnomalyArena
             }
             else
             {
-                GM.HitStop(heavy ? fb.heavyHitStop : fb.hitStop);
-                if (heavy) GM.Shake(fb.heavyShake);
+                // 子弹是连发的：每发都顿帧会让射击一卡一卡的，所以子弹命中敌人不顿帧、不震屏
+                if (kind != HitKind.Bullet)
+                {
+                    GM.HitStop(heavy ? fb.heavyHitStop : fb.hitStop);
+                    if (heavy) GM.Shake(fb.heavyShake);
+                }
             }
         }
 
@@ -265,6 +271,11 @@ namespace AnomalyArena
                     break;
                 case CharacterState.Normal:
                     TickNormal(dt);
+                    if (pushVel.sqrMagnitude > 1e-4f)
+                    {
+                        rb.linearVelocity += pushVel;
+                        pushVel *= Mathf.Exp(-GM.rules.knockDamping * dt);
+                    }
                     break;
             }
             if (IsAlive && State != CharacterState.Dashing && State != CharacterState.Hooked)
@@ -277,6 +288,28 @@ namespace AnomalyArena
         protected abstract void TickNormal(float dt);
 
         // ───── 撞飞与撞墙 ─────
+
+        /// <inheritdoc/>
+        public void Push(Vector3 dir, float distance)
+        {
+            if (!IsAlive) return;
+            dir = Query.Flat(dir);
+            if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
+            // 同撞飞：初速度 = 距离 × 阻尼系数，指数衰减后正好推 distance；连发时逐发叠加
+            pushVel += dir.normalized * (distance * GM.rules.knockDamping);
+        }
+
+        /// <inheritdoc/>
+        public void SlamIntoWall(Vector3 at, Vector3 away, float bounceDistance)
+        {
+            if (!IsAlive) return;
+            // 冲刺中刚体是运动学的，MovePosition 要到下一步物理才生效，切回动态后会丢；这里直接设位置
+            rb.position = at;
+            transform.position = at;
+            if (State == CharacterState.Dashing || State == CharacterState.Hooked) SetState(CharacterState.Normal);
+            TakeWallDamage(away);
+            if (IsAlive) Knockback(away, bounceDistance, KnockKind.Push);
+        }
 
         /// <summary>刚体冲量撞飞。距离 d 对应初速度 d × 阻尼系数，指数衰减后正好滑行 d。</summary>
         public void Knockback(Vector3 dir, float distance, KnockKind kind)
@@ -412,7 +445,10 @@ namespace AnomalyArena
             return w;
         }
 
-        /// <summary>按左键：流程进行中（钩子黏住）交给流程处理；否则发动一次效果并扣次。</summary>
+        /// <summary>
+        /// 按左键：流程进行中（钩子黏住）交给流程处理；上一把飞刀还没回来时不能用；
+        /// 否则发动一次效果。弹夹里还有子弹就先打弹夹，打空了才扣一次次数并装满弹夹（roundsPerUse）。
+        /// </summary>
         public bool TryUseWeapon()
         {
             var w = Weapon;
@@ -422,11 +458,18 @@ namespace AnomalyArena
                 w.Active.OnUsePressed();
                 return true;
             }
+            if (w.InFlight) return false;
             if (State != CharacterState.Normal || weaponCooldown > 0f) return false;
             w.ApplyDebugForce();
             bool first = !w.Revealed;
+            bool fromClip = w.RoundsLeft > 0;
             w.Effect.Use(w, this);
-            w.UsesLeft--;
+            if (fromClip) w.RoundsLeft--;
+            else
+            {
+                w.UsesLeft--;
+                w.RoundsLeft = Mathf.Max(1, w.Effect.roundsPerUse) - 1;
+            }
             w.Revealed = true;
             weaponCooldown = w.Effect.cooldown;
             if (first) OnWeaponRevealed(w);
@@ -438,10 +481,10 @@ namespace AnomalyArena
 
         public void OnWeaponRuntimeFinished() => CheckWeaponDepleted();
 
-        /// <summary>次数用完且没有进行中的流程时，武器消失。</summary>
+        /// <summary>次数和弹夹都用完、没有进行中的流程、飞刀也回来了时，武器消失。</summary>
         public void CheckWeaponDepleted()
         {
-            if (Weapon == null || Weapon.UsesLeft > 0 || Weapon.Active != null) return;
+            if (Weapon == null || Weapon.UsesLeft > 0 || Weapon.RoundsLeft > 0 || Weapon.Active != null || Weapon.InFlight) return;
             var w = Unequip();
             w.Consume();
         }
