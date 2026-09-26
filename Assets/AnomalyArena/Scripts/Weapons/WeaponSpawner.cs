@@ -51,9 +51,7 @@ namespace AnomalyArena
         {
             if (Random.value >= largeDropChance) return;
             if (!dropIgnoresCap && ground.Count >= groundCap) return;
-            float limit = GameManager.Instance.rules.arenaHalfSize - 1.5f;
-            pos.x = Mathf.Clamp(pos.x, -limit, limit);
-            pos.z = Mathf.Clamp(pos.z, -limit, limit);
+            pos = ArenaShape.ClampInside(pos, 1.5f);
             var w = Spawn(defs[Random.Range(0, defs.Length)], pos);
             Fx.Pop(pos + Vector3.up * 0.6f, new Color(0.85f, 0.65f, 0.15f), 2f);
             GameManager.Instance.hud.Toast("The big one dropped: " + w.Label, new Color(1f, 0.85f, 0.4f));
@@ -78,10 +76,7 @@ namespace AnomalyArena
         /// <summary>换下的武器留在地上，保留效果、揭晓状态和次数。</summary>
         public void Drop(Weapon w, Vector3 pos)
         {
-            float limit = GameManager.Instance.rules.arenaHalfSize - 1f;
-            pos.x = Mathf.Clamp(pos.x, -limit, limit);
-            pos.z = Mathf.Clamp(pos.z, -limit, limit);
-            w.PlaceOnGround(pos);
+            w.PlaceOnGround(ArenaShape.ClampInside(pos, 1f));
             ground.Add(w);
         }
 
@@ -118,13 +113,12 @@ namespace AnomalyArena
 
         Vector3 RandomPosition()
         {
-            float limit = GameManager.Instance.rules.arenaHalfSize - 2.5f;
             var player = GameManager.Instance.player;
             Vector3 best = Vector3.zero;
             float bestScore = -1f;
             for (int i = 0; i < 40; i++)
             {
-                var p = new Vector3(Random.Range(-limit, limit), 0f, Random.Range(-limit, limit));
+                var p = ArenaShape.RandomInside(2.5f);
                 float d = player ? Query.Flat(p - player.Position).magnitude : 99f;
                 foreach (var w in ground) if (w) d = Mathf.Min(d, Query.Flat(w.transform.position - p).magnitude);
                 if (d >= 4f) return p;

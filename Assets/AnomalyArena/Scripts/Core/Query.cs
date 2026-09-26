@@ -31,25 +31,36 @@ namespace AnomalyArena
         }
 
         /// <summary>
-        /// 近战只打一个人：前方扇形里（身体边缘在 reach 以内、方向在 arc/2 以内；贴身时不看角度）离得最近的那个角色。没有返回 null。
+        /// 前方扇形里的所有活着的角色（不含 self）：身体边缘在 reach 以内、方向在 arc/2 以内；贴身时不看角度。
+        /// 范围攻击（蓄力挥砍）用。
         /// </summary>
-        public static Combatant MeleeTarget(IWeaponHolder self, Vector3 origin, Vector3 aim, float reach, float arcDeg)
+        public static List<Combatant> InSector(IWeaponHolder self, Vector3 origin, Vector3 aim, float reach, float arcDeg)
         {
-            Combatant best = null;
-            float bestEdge = float.MaxValue;
+            var list = new List<Combatant>();
             // 多查 2 格：大型敌人中心在 reach 外、身体边缘在 reach 内也要算
             foreach (var c in Characters(AtCastHeight(origin), reach + 2f))
             {
                 if ((IWeaponHolder)c == self || !c.IsAlive) continue;
                 Vector3 to = Flat(c.Position - origin);
-                float d = to.magnitude, edge = d - c.Radius;
-                if (edge > reach) continue;
+                float d = to.magnitude;
+                if (d - c.Radius > reach) continue;
                 if (d > c.Radius && Vector3.Angle(aim, to) > arcDeg * 0.5f) continue;
-                if (edge < bestEdge)
-                {
-                    bestEdge = edge;
-                    best = c;
-                }
+                list.Add(c);
+            }
+            return list;
+        }
+
+        /// <summary>近战单体攻击（空手出拳）：同一个扇形里身体边缘离 origin 最近的那一个。没有返回 null。</summary>
+        public static Combatant MeleeTarget(IWeaponHolder self, Vector3 origin, Vector3 aim, float reach, float arcDeg)
+        {
+            Combatant best = null;
+            float bestEdge = float.MaxValue;
+            foreach (var c in InSector(self, origin, aim, reach, arcDeg))
+            {
+                float edge = Flat(c.Position - origin).magnitude - c.Radius;
+                if (edge >= bestEdge) continue;
+                bestEdge = edge;
+                best = c;
             }
             return best;
         }

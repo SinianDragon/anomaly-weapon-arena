@@ -98,8 +98,9 @@ namespace AnomalyArena
                 var m = new Material(GameManager.Instance.litMaterial);
                 m.SetTexture("_BaseMap", s.floor);
                 m.color = Color.white;
-                float tiles = GameManager.Instance.rules.arenaHalfSize * 2f / Mathf.Max(0.5f, s.floorTileSize);
-                m.SetTextureScale("_BaseMap", new Vector2(tiles, tiles));
+                // 地板网格的 UV 就是世界坐标 xz（ArenaSetup 生成），每 floorTileSize 格铺一块贴图
+                float tile = 1f / Mathf.Max(0.5f, s.floorTileSize);
+                m.SetTextureScale("_BaseMap", new Vector2(tile, tile));
                 r.sharedMaterial = m;
             }
             if (!s.gapEdge) return;
@@ -109,9 +110,9 @@ namespace AnomalyArena
             {
                 var box = z.GetComponent<BoxCollider>();
                 Vector3 outward = z.outward;
-                Vector3 along = Vector3.Cross(Vector3.up, outward).normalized;
-                // ArenaSetup：FallZone 中心在缺口中点向外 3 格处，沿边方向比缺口宽 1 格
-                float width = (Mathf.Abs(outward.x) > 0.5f ? box.size.z : box.size.x) - 1f;
+                // ArenaSetup：FallZone 的本地 z 朝外、本地 x 沿着边；中心在缺口中点向外 3 格处，沿边方向比缺口宽 1 格
+                Vector3 along = z.transform.right;
+                float width = box.size.x - 1f;
                 Vector3 edge = z.transform.position - outward * 3f;
                 edge.y = 0.01f;
                 int n = Mathf.Max(1, Mathf.CeilToInt(width / depth));

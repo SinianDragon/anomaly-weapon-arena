@@ -181,7 +181,7 @@ namespace AnomalyArena
         {
             var p = GM.player;
             var wv = GM.waves;
-            var panel = new Rect(18 * u, 18 * u, 330 * u, 118 * u);
+            var panel = new Rect(18 * u, 18 * u, 330 * u, 146 * u);
             Box(panel, new Color(0.05f, 0.07f, 0.1f, 0.72f));
             float x = panel.x + 14 * u, y = panel.y + 10 * u, w = panel.width - 28 * u;
 
@@ -201,6 +201,15 @@ namespace AnomalyArena
             Text(new Rect(x, y + 50 * u, w, 26 * u), right, 17, TextBad, TextAnchor.MiddleRight);
             Text(new Rect(x, y + 78 * u, w, 22 * u), $"Kills {wv.Kills}    Time {GM.Elapsed:0}s", 14, TextDim,
                 TextAnchor.MiddleLeft);
+
+            // 体力条：冲刺中亮黄、耗尽后变灰直到回到可以再冲的量
+            var st = p.stamina;
+            Text(new Rect(x, y + 102 * u, 90 * u, 20 * u), "Stamina", 13, TextDim, TextAnchor.MiddleLeft);
+            var sBar = new Rect(x + 70 * u, y + 107 * u, w - 70 * u, 10 * u);
+            Box(sBar, new Color(1f, 1f, 1f, 0.12f));
+            Color sc = st.Exhausted ? new Color(0.5f, 0.5f, 0.5f) :
+                st.Sprinting ? new Color(1f, 0.9f, 0.3f) : new Color(0.95f, 0.75f, 0.25f);
+            Box(new Rect(sBar.x, sBar.y, sBar.width * st.Value, sBar.height), sc);
         }
 
         void DrawWeapon()
@@ -222,7 +231,11 @@ namespace AnomalyArena
             else
             {
                 Text(inner, w.Label, 20, w.Revealed ? TextWeapon : Color.white, TextAnchor.MiddleLeft);
-                Text(inner, $"Uses {w.UsesLeft}/{w.MaxUses}", 20, w.UsesLeft > 0 ? Color.white : TextBad,
+                // 有弹夹的武器（反向射击）同时显示弹夹余量
+                string uses = w.RoundsLeft > 0
+                    ? $"Uses {w.UsesLeft}/{w.MaxUses}  +{w.RoundsLeft} rounds"
+                    : $"Uses {w.UsesLeft}/{w.MaxUses}";
+                Text(inner, uses, 20, w.UsesLeft > 0 || w.RoundsLeft > 0 ? Color.white : TextBad,
                     TextAnchor.MiddleRight);
                 if (w.Active is SwingCharge charge)
                 {
@@ -240,6 +253,7 @@ namespace AnomalyArena
                 {
                     string desc;
                     if (p.HeldShield != null) desc = "Enemy hooked: left click to throw it where you aim (try a gap!)";
+                    else if (w.InFlight) desc = "Knife in flight - it has to come back before you can throw it again";
                     else if (!w.Revealed) desc = "Unknown effect - use it (left click) to find out";
                     else desc = w.Effect.description;
                     Text(line2, desc, 14, p.HeldShield != null ? TextGood : TextDim, TextAnchor.MiddleLeft);
@@ -307,7 +321,7 @@ namespace AnomalyArena
 
             string[] lines =
             {
-                "WASD  move      Mouse  aim      Left click  attack / throw (punch when empty-handed)",
+                "WASD  move      Shift  sprint (uses stamina)      Mouse  aim      Left click  attack / throw",
                 "Walk over a weapon to pick it up; while armed, stand on one and right click to swap",
                 "Weapons have limited uses; once revealed, a weapon's effect never changes",
                 "Every effect can hurt you too. You lose if your HP hits 0 or you fall into a gap",

@@ -23,11 +23,16 @@ namespace AnomalyArena
         [SerializeField] bool revealed;
         [SerializeField] int usesLeft;
         [SerializeField] int maxUses;
+        [Tooltip("当前弹夹里还剩几发（roundsPerUse > 1 的效果才有）")] [SerializeField] int roundsLeft;
 
         public WeaponEffect Effect => effect;
         public bool Revealed { get => revealed; set => revealed = value; }
         public int UsesLeft { get => usesLeft; set => usesLeft = value; }
         public int MaxUses => maxUses;
+        /// <summary>弹夹余量：打空了下一发才扣一次次数。丢下再捡保留。</summary>
+        public int RoundsLeft { get => roundsLeft; set => roundsLeft = value; }
+        /// <summary>扔出去还没回来的飞刀；不为空时这把武器不能再用、也不会因次数用完而消失。</summary>
+        public Projectile InFlight { get; set; }
         /// <summary>进行中的持续流程（钩子、冲刺）。不为空时武器不会消失。</summary>
         public WeaponRuntime Active { get; set; }
         public IWeaponHolder Holder { get; private set; }

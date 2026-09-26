@@ -15,10 +15,14 @@ MonoBehaviour:
   id: 3
   type: 1
   displayName: Throwing Knife
-  description: The knife spins 12 tiles in a straight line. A kill drags the corpse back to where you threw from - dodge it
+  description: Ricochets between up to 4 enemies, then flies back - you can't throw again until it returns. A kill drags the corpse back at you
   cooldown: 0.3
+  holdToRepeat: 0
+  roundsPerUse: 1
   range: 12
   speed: 18
   damage: 10
-  returnSpeed: 12
+  maxTargets: 4
+  bounceRange: 7
+  returnSpeed: 14
   corpseKnockback: 5

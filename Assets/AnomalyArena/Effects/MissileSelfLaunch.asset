@@ -15,7 +15,10 @@ MonoBehaviour:
   id: 6
   type: 2
   displayName: Launch Yourself
-  description: 'Fire YOURSELF 15 tiles like a missile: kills enemies, bounces off walls, and dives into any gap on the way'
+  description: 'Fire YOURSELF 15 tiles like a missile: kills enemies on the way; a wall stops you, hurts you and bounces you back; gaps swallow you'
   cooldown: 0.3
+  holdToRepeat: 0
+  roundsPerUse: 1
   distance: 15
   speed: 25
+  wallBounce: 3

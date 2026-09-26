@@ -17,6 +17,8 @@ MonoBehaviour:
   displayName: Homing
   description: Flies off in a random direction, then locks onto a random target after 1s (it likes you best); the blast hits everyone
   cooldown: 0.5
+  holdToRepeat: 0
+  roundsPerUse: 1
   speed: 8
   randomSpreadDegrees: 360
   lockDelay: 1

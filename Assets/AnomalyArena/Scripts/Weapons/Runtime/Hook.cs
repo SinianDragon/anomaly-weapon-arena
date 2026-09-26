@@ -12,7 +12,13 @@ namespace AnomalyArena
     /// </summary>
     public class Hook : WeaponRuntime
     {
-        enum Phase { Extend, Pull, Hold, Retract }
+        enum Phase
+        {
+            Extend,
+            Pull,
+            Hold,
+            Retract
+        }
 
         KnifeHookEffect cfg;
         Phase phase;
@@ -38,6 +44,7 @@ namespace AnomalyArena
                 GetComponent<Renderer>().enabled = false;
                 blade = new StretchBlade(Art.Set, 0.55f);
             }
+
             UpdateBlade();
         }
 
@@ -56,6 +63,7 @@ namespace AnomalyArena
                 Cancel();
                 return;
             }
+
             float dt = Time.fixedDeltaTime;
             switch (phase)
             {
@@ -65,7 +73,8 @@ namespace AnomalyArena
                     Vector3 origin = Query.AtCastHeight(user.Position);
                     int mask = GameManager.WallMask | GameManager.CharacterMask;
                     // 从使用者体内出发，SphereCast 会自动忽略使用者自己
-                    if (Physics.SphereCast(origin, cfg.hookRadius, dir, out var hit, length, mask, QueryTriggerInteraction.Ignore))
+                    if (Physics.SphereCast(origin, cfg.hookRadius, dir, out var hit, length, mask,
+                            QueryTriggerInteraction.Ignore))
                     {
                         var c = Combatant.From(hit.collider);
                         if (c != null && (IWeaponHolder)c != user && c.IsAlive && c.State != CharacterState.Hooked)
@@ -85,6 +94,7 @@ namespace AnomalyArena
                     {
                         phase = Phase.Retract;
                     }
+
                     break;
                 }
                 case Phase.Pull:
@@ -95,6 +105,7 @@ namespace AnomalyArena
                         phase = Phase.Retract;
                         break;
                     }
+
                     // 拉的过程中移动鼠标，敌人跟着甩向那一边；拉回途中不会掉进缺口（Hooked 忽略 FallZone）
                     pullDistance = Mathf.MoveTowards(pullDistance, HoldDistance, cfg.pullSpeed * dt);
                     dir = user.AimDirection;
@@ -110,6 +121,7 @@ namespace AnomalyArena
                         Finish();
                         return;
                     }
+
                     dir = user.AimDirection;
                     PlaceTarget(HoldDistance);
                     break;
@@ -121,17 +133,17 @@ namespace AnomalyArena
                         Finish();
                         return;
                     }
+
                     break;
             }
+
             UpdateBlade();
         }
 
         void PlaceTarget(float distance)
         {
-            float limit = GameManager.Instance.rules.arenaHalfSize - target.Radius;
-            Vector3 p = user.Position + dir * distance;
-            p.x = Mathf.Clamp(p.x, -limit, limit);
-            p.z = Mathf.Clamp(p.z, -limit, limit);
+            // 拉到身前时不会把目标塞到平台外面（墙里或缺口外）
+            Vector3 p = ArenaShape.ClampInside(user.Position + dir * distance, target.Radius);
             p.y = target.Position.y;
             target.SetMovePosition(p);
             length = Query.Flat(p - user.Position).magnitude;
@@ -157,6 +169,7 @@ namespace AnomalyArena
                 t.SetState(CharacterState.Normal);
                 t.Knockback(user.AimDirection, cfg.throwDistance, KnockKind.Throw);
             }
+
             Finish();
         }
 

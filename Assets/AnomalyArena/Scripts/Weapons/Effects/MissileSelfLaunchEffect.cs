@@ -12,6 +12,7 @@ namespace AnomalyArena
     {
         public float distance = 15f;
         public float speed = 25f;
+        [Tooltip("撞墙后被弹回的距离（弹回本身撞墙不再扣血）")] public float wallBounce = 3f;
 
         public override void Use(Weapon weapon, IWeaponHolder user)
         {
