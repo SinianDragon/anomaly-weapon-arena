@@ -3,9 +3,9 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 人形导弹冲刺。进：使用者进入 Dashing（刚体改为运动学）。
-    /// 出：剩余距离用完 → Normal；撞墙 → 停在墙前、扣一次墙伤、被弹回 wallBounce（SlamIntoWall）；
-    ///     中途掉进缺口或死亡 → 直接结束，不改使用者状态。
+    /// Human-missile dash. Enter: the user enters Dashing (rigidbody becomes kinematic).
+    /// Exit: remaining distance used up → Normal; hit a wall → stop in front of it, take wall damage once, bounce back by wallBounce (SlamIntoWall);
+    ///     fell into a gap or died on the way → end immediately without changing the user's state.
     /// </summary>
     public class SelfLaunch : WeaponRuntime
     {
@@ -23,7 +23,7 @@ namespace AnomalyArena
             dir = Query.Flat(u.AimDirection).normalized;
             remaining = cfg.distance;
             u.SetState(CharacterState.Dashing);
-            // 美术版：玩家身后拖一团导弹尾焰（挂在这个流程物体上，流程结束一起销毁）
+            // Illustrated mode: a missile flame trails behind the player (attached to this routine object and destroyed with it)
             var flameTex = Art.On ? (Art.Set.rocketFlame ? Art.Set.rocketFlame : Art.Set.flame) : null;
             if (flameTex)
             {
@@ -55,12 +55,12 @@ namespace AnomalyArena
 
             Vector3 p = user.Position;
             float r = user.Radius;
-            // 从身后半个身位开始扫，避免贴墙时扫描起点已在墙内
+            // Sweep from half a body behind, so the sweep does not start inside the wall when touching it
             Vector3 origin = Query.AtCastHeight(p) - dir * r;
             if (Physics.SphereCast(origin, r * 0.95f, dir, out var hit, step + r, GameManager.WallMask,
                     QueryTriggerInteraction.Ignore))
             {
-                // 撞墙：停在墙前，扣墙伤并被弹回；冲刺到此结束
+                // Wall hit: stop in front of the wall, take wall damage and bounce back; the dash ends here
                 p += dir * Mathf.Max(0f, hit.distance - r - 0.02f);
                 KillAlong(p, r);
                 Vector3 away = Query.Flat(hit.normal);
@@ -89,7 +89,7 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>冲刺路上碰到的人直接死（大型也算）。</summary>
+        /// <summary>Characters touched during the dash die instantly (large ones too).</summary>
         void KillAlong(Vector3 p, float r)
         {
             foreach (var c in Query.Characters(Query.AtCastHeight(p), r + 0.1f))

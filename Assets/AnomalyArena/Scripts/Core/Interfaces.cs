@@ -8,23 +8,23 @@ namespace AnomalyArena
         Enemy
     }
 
-    /// <summary>角色状态机的状态。每种状态的进入 / 退出写在 Combatant.SetState 里。</summary>
+    /// <summary>States of the character state machine. Enter / exit logic for each state is in Combatant.SetState.</summary>
     public enum CharacterState
     {
-        Normal, // 自由行动
-        Knocked, // 被撞飞：不能操作，撞墙扣血
-        Thrown, // 被钩子扔出去：同上，距离不受体型影响
-        Hooked, // 被钩住：不能移动、不能攻击，位置由钩子控制，不会掉进缺口
-        Dashing, // 人形导弹冲刺中：不吃攻击伤害，不被撞飞
-        Falling, // 掉进缺口：已判定消灭 / 失败，只剩下落表现
+        Normal, // free to act
+        Knocked, // knocked back: no control, wall hits deal damage
+        Thrown, // thrown by the hook: same as above, distance not affected by body size
+        Hooked, // hooked: cannot move or attack, position controlled by the hook, cannot fall into a gap
+        Dashing, // human-missile dash: immune to attack damage and knockback
+        Falling, // fell into a gap: already counted as eliminated / lost, only the fall is left to play
         Dead,
     }
 
     public enum KnockKind
     {
-        Hit, // 普通撞飞：距离乘体型系数，撞墙扣血
-        Throw, // 钩子投掷：距离固定，撞墙扣血
-        Push, // 后坐力推开：撞墙不扣血
+        Hit, // normal knockback: distance scaled by body size, wall hits deal damage
+        Throw, // hook throw: fixed distance, wall hits deal damage
+        Push, // recoil push: wall hits deal no damage
     }
 
     public enum DeathCause
@@ -34,24 +34,24 @@ namespace AnomalyArena
         FellIntoGap
     }
 
-    /// <summary>受击特效的种类：决定碎片颜色、多少和有没有冲击环。</summary>
+    /// <summary>Kind of hit effect: decides shard color, count and whether there is a shock ring.</summary>
     public enum HitKind
     {
-        Blunt, // 拳头、挥砍
-        Bullet, // 子弹
-        Pierce, // 飞刀、人形导弹穿过
-        Slam, // 撞墙、被尸体砸到
-        Blast, // 爆炸
+        Blunt, // punch, swing
+        Bullet, // bullet
+        Pierce, // throwing knife, human missile passing through
+        Slam, // wall impact, hit by a corpse
+        Blast, // explosion
     }
 
     public struct DamageInfo
     {
         public float amount;
 
-        /// <summary>攻击伤害受 0.5 秒保护与冲刺免疫影响；撞墙伤害不走这里。</summary>
+        /// <summary>Attack damage is subject to the 0.5 s protection and dash immunity; wall damage does not go through here.</summary>
         public bool isAttack;
 
-        /// <summary>撞飞方向；为零时受击特效的碎片随机飞。</summary>
+        /// <summary>Knockback direction; when zero, hit shards fly in random directions.</summary>
         public Vector3 knockDir;
 
         public float knockDistance;
@@ -77,13 +77,13 @@ namespace AnomalyArena
     {
         bool IsAlive { get; }
 
-        /// <returns>这次伤害是否真正生效（保护中 / 冲刺中返回 false）</returns>
+        /// <returns>Whether the damage actually applied (false while protected / dashing)</returns>
         bool ReceiveDamage(DamageInfo info);
     }
 
     /// <summary>
-    /// “能拿武器的人”：能拿武器、能被撞飞、能受伤、有朝向。
-    /// 武器效果只通过这个接口操作使用者，以后敌人捡武器时不用改武器代码。
+    /// A 'weapon holder': can hold a weapon, be knocked back, take damage, and has a facing.
+    /// Weapon effects act on the user only through this interface, so weapon code will not need changes when enemies pick up weapons later.
     /// </summary>
     public interface IWeaponHolder : IDamageReceiver
     {
@@ -97,17 +97,17 @@ namespace AnomalyArena
 
         void Knockback(Vector3 dir, float distance, KnockKind kind);
 
-        /// <summary>叠加在自己移动上的推力（连发后坐力）：不进入被撞飞状态、不打断操作，撞墙不扣血，推下缺口照样掉。</summary>
+        /// <summary>Push added on top of own movement (burst-fire recoil): does not enter the knocked state or interrupt input, no wall damage, but can still push the holder into a gap.</summary>
         void Push(Vector3 dir, float distance);
 
-        /// <summary>撞墙（人形导弹）：瞬移到 at、扣一次墙伤，再朝 away 弹回 bounceDistance。</summary>
+        /// <summary>Wall slam (human missile): teleport to at, take wall damage once, then bounce bounceDistance toward away.</summary>
         void SlamIntoWall(Vector3 at, Vector3 away, float bounceDistance);
 
         void SetState(CharacterState state);
         void SetMovePosition(Vector3 position);
         void Kill();
 
-        /// <summary>武器上的持续流程（钩子、冲刺）结束时调用，用来处理次数耗尽的武器。</summary>
+        /// <summary>Called when a weapon's ongoing routine (hook, dash) ends, to handle a weapon whose uses have run out.</summary>
         void OnWeaponRuntimeFinished();
     }
 }

@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 
 namespace AnomalyArena
 {
-    /// <summary>白盒阶段最低限度的反馈：半透明闪一下就消失（不算正式特效）。</summary>
+    /// <summary>Minimal whitebox feedback: a translucent flash that disappears right away (not a proper effect).</summary>
     public static class Fx
     {
         class Fade : MonoBehaviour
@@ -50,9 +50,9 @@ namespace AnomalyArena
             return f;
         }
 
-        // ───── 美术版：带贴图的一次性特效 ─────
+        // ───── Illustrated mode: one-shot textured effects ─────
 
-        /// <summary>朝向镜头的贴图（命中星光、尘土），从 startSize 长到 endSize 并淡出。size 是高度。</summary>
+        /// <summary>Camera-facing texture (hit spark, dust) that grows from startSize to endSize and fades out. size is the height.</summary>
         public static void SpriteBillboard(Texture tex, Vector3 pos, float startSize, float endSize, float life)
         {
             var go = Prim(PrimitiveType.Quad, pos, Vector3.one * startSize);
@@ -67,12 +67,12 @@ namespace AnomalyArena
             };
         }
 
-        /// <summary>平躺在地上、贴图右边指向 forward 的贴图（挥拳弧光），长度从 length 长到 length × grow 并淡出。</summary>
+        /// <summary>Texture lying flat on the ground with its right side pointing along forward (punch arc); its length grows from length to length × grow and fades out.</summary>
         public static void SpriteFlat(Texture tex, Vector3 pos, Vector3 forward, float length, float life,
             float grow = 1.2f)
         {
             var go = Prim(PrimitiveType.Quad, pos, Vector3.one);
-            // 同 Art.Flat：先躺平，再让贴图的右边指向前方
+            // Same as Art.Flat: lie flat first, then point the right side of the texture forward
             go.transform.rotation = Quaternion.LookRotation(Query.Flat(forward)) *
                                     Quaternion.Euler(0f, -90f, 0f) * Quaternion.Euler(90f, 0f, 0f);
             float aspect = Art.Aspect(tex);
@@ -84,7 +84,7 @@ namespace AnomalyArena
             };
         }
 
-        /// <summary>贴地的圆形贴图（爆炸范围圈），直径从 0 扩散到 2 × radius 并淡出。</summary>
+        /// <summary>Round texture on the ground (explosion range ring); its diameter expands from 0 to 2 × radius and fades out.</summary>
         public static void SpriteRing(Texture tex, Vector3 pos, float radius, float life)
         {
             var go = Prim(PrimitiveType.Quad, new Vector3(pos.x, 0.06f, pos.z), Vector3.one * 0.1f);
@@ -97,7 +97,7 @@ namespace AnomalyArena
             };
         }
 
-        /// <summary>朝向镜头、按顺序播放的帧动画（爆炸），整段 life 秒，最后一帧淡出。</summary>
+        /// <summary>Camera-facing frame animation played in order (explosion), life seconds in total, fading on the last frame.</summary>
         public static void Flipbook(System.Collections.Generic.IReadOnlyList<Texture> frames, Vector3 pos, float size,
             float life)
         {
@@ -133,8 +133,8 @@ namespace AnomalyArena
         }
 
         /// <summary>
-        /// 受击碎片：count 个小方块从 pos 朝 dir 左右 spreadDeg 度内飞出，先快后慢、边飞边缩小变淡。
-        /// dir 为零时全向飞。
+        /// Hit shards: count small cubes fly from pos within spreadDeg degrees either side of dir, fast then slow, shrinking and fading as they go.
+        /// When dir is zero they fly in all directions.
         /// </summary>
         public static void Burst(Vector3 pos, Vector3 dir, Color c, int count, float speed, float spreadDeg, float size)
         {
@@ -146,7 +146,7 @@ namespace AnomalyArena
                 Vector3 d = omni
                     ? Quaternion.AngleAxis(UnityEngine.Random.Range(0f, 360f), Vector3.up) * Vector3.forward
                     : Quaternion.AngleAxis(UnityEngine.Random.Range(-spreadDeg, spreadDeg) * 0.5f, Vector3.up) * dir;
-                d.y = UnityEngine.Random.Range(0.1f, 0.6f); // 带一点向上，俯视镜头下看得出“溅起来”
+                d.y = UnityEngine.Random.Range(0.1f, 0.6f); // slightly upward so the splash reads from the top-down camera
                 Vector3 v = d.normalized * speed * UnityEngine.Random.Range(0.6f, 1.2f);
                 float s = size * UnityEngine.Random.Range(0.6f, 1.3f);
                 float life = UnityEngine.Random.Range(0.22f, 0.38f);
@@ -155,14 +155,14 @@ namespace AnomalyArena
                 var f = Make(go, c, life);
                 f.update = (t, k) =>
                 {
-                    float travel = 1f - (1f - k) * (1f - k); // 先快后慢
+                    float travel = 1f - (1f - k) * (1f - k); // fast then slow
                     t.position = pos + v * (life * travel);
                     t.localScale = Vector3.one * (s * (1f - k * 0.7f));
                 };
             }
         }
 
-        /// <summary>地面冲击环：从中心快速扩散到 radius 后消失。</summary>
+        /// <summary>Ground shock ring: expands quickly from the center to radius, then disappears.</summary>
         public static void Ring(Vector3 pos, float radius, Color c, float life = 0.25f)
         {
             var go = Prim(PrimitiveType.Cylinder, new Vector3(pos.x, 0.08f, pos.z), new Vector3(0.3f, 0.01f, 0.3f));
@@ -184,7 +184,7 @@ namespace AnomalyArena
             };
         }
 
-        /// <summary>地面扇形，显示挥砍范围。</summary>
+        /// <summary>Ground sector showing the swing range.</summary>
         public static void Sector(Vector3 origin, Vector3 dir, float radius, float arcDeg, Color c)
         {
             var go = new GameObject("SwingArc");
@@ -197,7 +197,7 @@ namespace AnomalyArena
             Make(go, c, 0.15f).mesh = mesh;
         }
 
-        /// <summary>把 mesh 重建成朝 +Z 的扇形（原点在圆心）。蓄力预览每帧调用。</summary>
+        /// <summary>Rebuilds mesh as a sector facing +Z (origin at the center). Called every frame by the charge preview.</summary>
         public static void SectorMesh(Mesh mesh, float radius, float arcDeg)
         {
             int seg = Mathf.Max(4, Mathf.CeilToInt(arcDeg / 8f));

@@ -3,16 +3,16 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 导弹 · 发射自己：使用者朝瞄准方向冲出固定距离，路上碰到的敌人直接死（大型也算）；
-    /// 撞墙反弹，用剩下的距离继续飞，这一下不扣墙伤；冲刺时不吃攻击伤害。
-    /// 反噬：路线上有缺口就会冲下去。
+    /// Missile · Launch Yourself: the user dashes a fixed distance along the aim direction, instantly killing enemies on the way (large ones too);
+    /// a wall stops the dash, deals wall damage once and bounces the user back; attack damage is ignored while dashing.
+    /// Backfire: if there is a gap on the path, you dash into it.
     /// </summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/Effects/Missile Self Launch")]
     public class MissileSelfLaunchEffect : WeaponEffect
     {
         public float distance = 15f;
         public float speed = 25f;
-        [Tooltip("撞墙后被弹回的距离（弹回本身撞墙不再扣血）")] public float wallBounce = 3f;
+        [Tooltip("Distance bounced back after hitting a wall (the bounce itself deals no further wall damage)")] public float wallBounce = 3f;
 
         public override void Use(Weapon weapon, IWeaponHolder user)
         {

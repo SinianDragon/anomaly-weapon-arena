@@ -7,8 +7,8 @@ using UnityEngine.Rendering;
 namespace AnomalyArena.EditorTools
 {
     /// <summary>
-    /// 一键生成白盒：图层、材质、效果数值资源、预制体、场景（地面 / 墙 / 缺口 / FallZone）和构建设置。
-    /// 重新运行会覆盖场景和预制体，但保留已经调过的效果数值资源。
+    /// One-click whitebox build: layers, materials, effect value assets, prefabs, the scene (floor / walls / gaps / FallZones) and build settings.
+    /// Running it again overwrites the scene and prefabs but keeps effect value assets that have already been tuned.
     /// </summary>
     public static class ArenaSetup
     {
@@ -18,10 +18,10 @@ namespace AnomalyArena.EditorTools
         const string EffectDir = Root + "/Effects";
         public const string ScenePath = Root + "/Scenes/Arena.unity";
 
-        /// <summary>发布版本号：写进 PlayerSettings.bundleVersion，标题画面右下角显示。</summary>
+        /// <summary>Release version: written to PlayerSettings.bundleVersion and shown in the bottom-right corner of the title screen.</summary>
         public const string Version = "1.0.0";
 
-        const float LargeRadius = 1f, LargeHeight = 4f; // 大型敌人 = 小型（半径 0.5、高 2）的两倍
+        const float LargeRadius = 1f, LargeHeight = 4f; // large enemy = twice the small one (radius 0.5, height 2)
 
         [MenuItem("Anomaly Arena/1. Build Whitebox Scene")]
         public static void Setup()
@@ -33,7 +33,7 @@ namespace AnomalyArena.EditorTools
             int wallLayer = LayerMask.NameToLayer("Wall");
             int charLayer = LayerMask.NameToLayer("Character");
 
-            // ───── 材质 ─────
+            // ───── Materials ─────
             var mLit = Lit("Base", Color.white);
             var mFx = Fx("FxTransparent");
             var mFloor = Lit("Floor", new Color(0.78f, 0.8f, 0.82f));
@@ -50,10 +50,10 @@ namespace AnomalyArena.EditorTools
             var mMissile = Lit("Missile", new Color(0.9f, 0.35f, 0.2f));
             var noFriction = NoFriction();
 
-            // ───── 效果数值资源（已存在则保留数值，名字和说明每次刷新） ─────
+            // ───── Effect value assets (existing values are kept; names and descriptions are refreshed every time) ─────
             var (swing, reverse, knifeThrow, hook, homing, self) = Effects();
 
-            // ───── 预制体 ─────
+            // ───── Prefabs ─────
             var playerGo = BuildCharacter("Player", 0.5f, 2f, 1f, mPlayer, mFacing, noFriction, charLayer,
                 out var pBody, out var pHand);
             var pc = playerGo.AddComponent<PlayerController>();
@@ -72,7 +72,7 @@ namespace AnomalyArena.EditorTools
             SetEnemy(small, 10f, 6f * 0.9f, 0.5f, 1f, 5f, 0.3f, 0.8f, 0.5f, 1f, sBody, sHand, mSmall, mWindup);
             var smallPrefab = SavePrefab(smallGo, "EnemySmall").GetComponent<Enemy>();
 
-            // 大型 = 小型的两倍大小：半径 1、高 4
+            // Large = twice the size of small: radius 1, height 4
             var largeGo = BuildCharacter("EnemyLarge", LargeRadius, LargeHeight, 5f, mLarge, mFacing, noFriction,
                 charLayer, out var lBody, out var lHand);
             var large = largeGo.AddComponent<Enemy>();
@@ -80,7 +80,7 @@ namespace AnomalyArena.EditorTools
             large.large = true;
             var largePrefab = SavePrefab(largeGo, "EnemyLarge").GetComponent<Enemy>();
 
-            // 地上的枪 / 刀 / 导弹：细长方块 / 扁平长条 / 竖着的圆柱
+            // Gun / knife / missile on the ground: thin box / flat bar / upright cylinder
             var gunPrefab = BuildWeapon("Gun", WeaponType.Gun, PrimitiveType.Cube, new Vector3(0.25f, 0.25f, 1.2f),
                 mGun);
             var knifePrefab = BuildWeapon("Knife", WeaponType.Knife, PrimitiveType.Cube,
@@ -88,7 +88,7 @@ namespace AnomalyArena.EditorTools
             var missilePrefab = BuildWeapon("Missile", WeaponType.Missile, PrimitiveType.Cylinder,
                 new Vector3(0.4f, 0.5f, 0.4f), mMissile);
 
-            // ───── 场景 ─────
+            // ───── Scene ─────
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
@@ -112,7 +112,7 @@ namespace AnomalyArena.EditorTools
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.45f, 0.47f, 0.52f);
 
-            ArenaGeometryBuilder.Build(mFloor, mWall, mGapEdge, wallLayer); // 不规则多边形平台，形状见 ArenaShape
+            ArenaGeometryBuilder.Build(mFloor, mWall, mGapEdge, wallLayer); // irregular polygon platform, shape defined in ArenaShape
 
             var gm = new GameObject("GameManager").AddComponent<GameManager>();
             var waves = new GameObject("WaveManager").AddComponent<WaveManager>();
@@ -146,14 +146,14 @@ namespace AnomalyArena.EditorTools
             };
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            // 重新打开刚保存的场景：否则内存里的场景仍指向覆盖前的旧预制体，直接点播放会报引用丢失
+            // Reopen the scene that was just saved: otherwise the scene in memory still points at the old prefabs and pressing Play reports missing references
             EditorSceneManager.OpenScene(ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
             PlayerSettings.productName = "Anomaly Weapon Arena";
             PlayerSettings.bundleVersion = Version;
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
-            PlayerSettings.WebGL.decompressionFallback = true; // GitHub Pages 不返回 Content-Encoding
+            PlayerSettings.WebGL.decompressionFallback = true; // GitHub Pages does not send Content-Encoding
             PlayerSettings.defaultWebScreenWidth = 1280;
             PlayerSettings.defaultWebScreenHeight = 720;
             AssetDatabase.SaveAssets();
@@ -173,15 +173,15 @@ namespace AnomalyArena.EditorTools
         }
 
         /// <summary>
-        /// 不重建场景的更新：刷新效果名字 / 说明、生成美术素材表并挂到场景的 GameManager、
-        /// 把敌人预制体改成贴身挥拳的数值、大型敌人缩成小型的两倍、武器补给改成每波 3 / 5 / 8 把。已经调过的其他数值都保留。
+        /// Update without rebuilding the scene: refresh effect names / descriptions, generate the art set and assign it to the scene's GameManager,
+        /// switch the enemy prefabs to the close-range punch values, shrink the large enemy to twice the small one, and set weapon supply to 3 / 5 / 8 per wave. All other tuned values are kept.
         /// </summary>
         [MenuItem("Anomaly Arena/3. Update Existing Scene (texts, art, enemies, weapon supply)")]
         public static void UpdateExisting()
         {
             var (_, reverse, knifeThrow, _, _, _) = Effects();
-            // v0.8 手感：反向射击改成按住连发（一次次数 = 5 发弹夹，每发小后坐力），飞刀回程稍快。
-            // 资源里已存的旧值会盖过代码默认值，所以这里显式写入
+            // v0.8 feel: Reverse Shot becomes hold-to-fire (one use = a 5-round clip, small recoil per shot); the knife returns a bit faster.
+            // Old values stored in the assets override the code defaults, so they are written explicitly here
             reverse.cooldown = 0.12f;
             reverse.holdToRepeat = true;
             reverse.roundsPerUse = 5;
@@ -197,7 +197,7 @@ namespace AnomalyArena.EditorTools
             var gm = Object.FindAnyObjectByType<GameManager>();
             gm.art = art;
             EditorUtility.SetDirty(gm);
-            // 地上上限放宽到 12，第 3 波的 8 把才放得下
+            // Ground cap raised to 12 so the 8 weapons of wave 3 fit
             var spawner = Object.FindAnyObjectByType<WeaponSpawner>();
             spawner.perWaveCounts = new[] { 3, 5, 8 };
             spawner.groundCap = 12;
@@ -224,14 +224,14 @@ namespace AnomalyArena.EditorTools
             PrefabUtility.UnloadPrefabContents(root);
         }
 
-        /// <summary>按半径和高度摆好碰撞体、白盒身体、朝向小方块和手的位置（BuildCharacter 和 PatchEnemy 共用）。</summary>
+        /// <summary>Sets up the collider, whitebox body, facing marker and hand position from radius and height (shared by BuildCharacter and PatchEnemy).</summary>
         static void ApplyBodySize(GameObject root, float r, float height)
         {
             var col = root.GetComponent<CapsuleCollider>();
             col.radius = r;
             col.height = height;
             col.center = new Vector3(0f, height * 0.5f, 0f);
-            // Unity 胶囊体默认直径 1、高 2
+            // Unity's capsule has diameter 1 and height 2 by default
             var body = root.transform.Find("Body");
             body.localPosition = new Vector3(0f, height * 0.5f, 0f);
             body.localScale = new Vector3(r * 2f, height * 0.5f, r * 2f);
@@ -264,11 +264,11 @@ namespace AnomalyArena.EditorTools
             return (swing, reverse, knifeThrow, hook, homing, self);
         }
 
-        // ───── 美术版素材 ─────
+        // ───── Illustrated-mode assets ─────
 
         const string ArtDir = Root + "/Art";
 
-        /// <summary>设置贴图导入方式（透明、地板可平铺），生成 / 更新 ArtSet.asset。</summary>
+        /// <summary>Sets texture import options (transparency, tiling for the floor) and creates / updates ArtSet.asset.</summary>
         static ArtSet BuildArtSet()
         {
             string path = ArtDir + "/ArtSet.asset";
@@ -286,14 +286,14 @@ namespace AnomalyArena.EditorTools
             set.knife = Tex("knife");
             set.missileLauncher = Tex("missile_launcher");
             set.hookHilt = Tex("hook_hilt");
-            set.hookMid = Tex("hook_mid", true); // 一节链条，沿长度重复平铺
+            set.hookMid = Tex("hook_mid", true); // one chain link, tiled along the length
             set.hookTip = Tex("hook_tip");
             set.missile = Tex("missile");
             set.flame = Tex("flame");
-            set.floor = Tex("floor_sand_muted", true); // 去饱和、降对比的沙地，文字压在上面也看得清
+            set.floor = Tex("floor_sand_muted", true); // desaturated, low-contrast sand so text on top stays readable
             set.gapEdge = Tex("gap_edge");
             set.wallBrick = Tex("wall_brick", true);
-            // 1.0 素材：蓄力发光（由原图加光晕生成，四周边距相同）、尸体、特效
+            // 1.0 assets: wind-up glow (made from the base image plus a halo, same margin on every side), corpses, effects
             set.enemySmallWindup = Tex("enemy_small_windup");
             set.enemyLargeWindup = Tex("enemy_large_windup");
             set.corpseSmall = Tex("corpse_small");
@@ -324,7 +324,7 @@ namespace AnomalyArena.EditorTools
                 {
                     ti.textureType = TextureImporterType.Default;
                     ti.alphaIsTransparency = true;
-                    ti.npotScale = TextureImporterNPOTScale.None; // 保留原始宽高比，面片按宽高比缩放
+                    ti.npotScale = TextureImporterNPOTScale.None; // keep the original aspect ratio; quads are scaled to match
                     ti.wrapMode = repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
                     ti.mipmapEnabled = true;
                     ti.SaveAndReimport();
@@ -336,7 +336,7 @@ namespace AnomalyArena.EditorTools
             return t;
         }
 
-        // ───── 预制体 ─────
+        // ───── Prefabs ─────
 
         static GameObject BuildCharacter(string name, float r, float height, float mass, Material body, Material facing,
             PhysicsMaterial physMat, int layer, out Renderer bodyRenderer, out Transform hand)
@@ -358,7 +358,7 @@ namespace AnomalyArena.EditorTools
             bodyRenderer = vis.GetComponent<Renderer>();
             bodyRenderer.sharedMaterial = body;
 
-            // 前面加一个小方块表示朝向
+            // Small box in front to show facing
             var nose = GameObject.CreatePrimitive(PrimitiveType.Cube);
             nose.name = "Facing";
             Object.DestroyImmediate(nose.GetComponent<Collider>());
@@ -416,7 +416,7 @@ namespace AnomalyArena.EditorTools
             return prefab;
         }
 
-        // ───── 资源 ─────
+        // ───── Assets ─────
 
         static T Effect<T>(string file, EffectId id, WeaponType type, string displayName, float cooldown, string desc)
             where T : WeaponEffect

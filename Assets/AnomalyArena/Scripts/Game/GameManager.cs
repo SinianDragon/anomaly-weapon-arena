@@ -8,31 +8,31 @@ namespace AnomalyArena
 {
     public enum GameState { Title, Playing, Won, Lost }
 
-    /// <summary>一局的总控：开始、胜负判定、R 重开、清理飞行物和特殊状态。</summary>
+    /// <summary>Controls a run: start, win / lose, restart with R, cleanup of projectiles and special states.</summary>
     [DefaultExecutionOrder(-100)]
     public class GameManager : MonoBehaviour
     {
         [Serializable]
         public class Rules
         {
-            [Tooltip("被撞飞 / 被扔出去后撞墙扣的血（不受保护影响）")] public float wallDamage = 5f;
-            [Tooltip("撞墙那一刻朝墙的速度超过这个值才算撞到（待调）")] public float wallHitSpeed = 3f;
-            [Tooltip("撞飞的衰减系数：初速度 = 距离 × 系数")] public float knockDamping = 6f;
+            [Tooltip("Damage for hitting a wall after being knocked back / thrown (ignores protection)")] public float wallDamage = 5f;
+            [Tooltip("Speed toward the wall at impact must exceed this to count as a hit (to be tuned)")] public float wallHitSpeed = 3f;
+            [Tooltip("Knockback damping: initial speed = distance × damping")] public float knockDamping = 6f;
         }
 
-        /// <summary>受击反馈的手感参数（闪白、压扁、顿帧、震屏）。</summary>
+        /// <summary>Feel parameters for hit feedback (flash, squash, hit stop, screen shake).</summary>
         [Serializable]
         public class Feedback
         {
-            [Tooltip("受击闪白持续秒数")] public float flashTime = 0.1f;
-            [Tooltip("受击时身体被压扁的程度（0 = 不变形）")] public float squash = 0.35f;
-            [Tooltip("普通受击的顿帧秒数（真实时间）")] public float hitStop = 0.035f;
-            [Tooltip("重击（伤害达到 heavyDamage、撞墙、爆炸、玩家挨打）的顿帧秒数")] public float heavyHitStop = 0.08f;
-            [Tooltip("伤害达到多少算重击")] public float heavyDamage = 10f;
-            [Tooltip("顿帧期间的时间缩放")] public float hitStopTimeScale = 0.05f;
-            [Tooltip("玩家挨打时的震屏幅度（格）")] public float playerHitShake = 0.5f;
-            [Tooltip("重击敌人时的震屏幅度（格）")] public float heavyShake = 0.25f;
-            [Tooltip("震屏每秒衰减多少格")] public float shakeDecay = 4f;
+            [Tooltip("Seconds the white flash lasts")] public float flashTime = 0.1f;
+            [Tooltip("How much the body is squashed on hit (0 = no deformation)")] public float squash = 0.35f;
+            [Tooltip("Hit stop for a normal hit, in seconds (real time)")] public float hitStop = 0.035f;
+            [Tooltip("Hit stop for a heavy hit (damage reaches heavyDamage, wall impact, explosion, player hit), in seconds")] public float heavyHitStop = 0.08f;
+            [Tooltip("Damage at which a hit counts as heavy")] public float heavyDamage = 10f;
+            [Tooltip("Time scale during hit stop")] public float hitStopTimeScale = 0.05f;
+            [Tooltip("Screen shake amplitude when the player is hit (units)")] public float playerHitShake = 0.5f;
+            [Tooltip("Screen shake amplitude when an enemy takes a heavy hit (units)")] public float heavyShake = 0.25f;
+            [Tooltip("How many units of shake decay per second")] public float shakeDecay = 4f;
         }
 
         public static GameManager Instance { get; private set; }
@@ -52,12 +52,12 @@ namespace AnomalyArena
         public Camera cam;
 
         [Header("Materials")]
-        [Tooltip("运行时生成的白盒物体用的基础材质（URP Lit）")] public Material litMaterial;
-        [Tooltip("半透明提示用的材质（URP Unlit 透明）")] public Material fxMaterial;
+        [Tooltip("Base material for whitebox objects created at runtime (URP Lit)")] public Material litMaterial;
+        [Tooltip("Material for translucent hints (URP Unlit transparent)")] public Material fxMaterial;
         public Material spawnMarkerMaterial;
 
         [Header("Art")]
-        [Tooltip("美术版贴图；在标题画面切换白盒 / 美术版")] public ArtSet art;
+        [Tooltip("Illustrated-mode textures; whitebox / illustrated is switched on the title screen")] public ArtSet art;
 
         public GameState State { get; private set; } = GameState.Title;
         public DeathCause LoseCause { get; private set; }
@@ -66,7 +66,7 @@ namespace AnomalyArena
         readonly List<MonoBehaviour> transients = new List<MonoBehaviour>();
         readonly Dictionary<Color, Material> matCache = new Dictionary<Color, Material>();
         bool finalWaveCleared;
-        /// <summary>按 R 重开后跳过标题，直接从第 1 波开始。</summary>
+        /// <summary>After restarting with R, skip the title screen and start from wave 1.</summary>
         static bool skipTitle;
         float hitStopLeft;
         bool hitStopStartedThisFrame;
@@ -82,30 +82,30 @@ namespace AnomalyArena
             CharacterMask = 1 << CharacterLayer;
             if (!cam) cam = Camera.main;
             if (cam) camBase = cam.transform.position;
-            // timeScale 是全局的，重开 / 切美术重新加载场景时不会自动复原；顿帧中途切场景会一直慢动作
+            // timeScale is global and is not restored when the scene reloads on restart / art switch; switching scenes mid hit stop would leave everything in slow motion
             Time.timeScale = 1f;
         }
 
-        // ───── 受击反馈：顿帧与震屏 ─────
+        // ───── Hit feedback: hit stop and screen shake ─────
 
-        /// <summary>顿帧：接下来 seconds 秒（真实时间）几乎暂停。同时来的多次取最长的，不累加。</summary>
+        /// <summary>Hit stop: nearly pauses for the next seconds seconds (real time). Overlapping requests take the longest, they do not add up.</summary>
         public void HitStop(float seconds)
         {
             if (seconds <= 0f) return;
             hitStopLeft = Mathf.Max(hitStopLeft, seconds);
-            // 立即生效，而不是等下一帧的 Update：等到下一帧时会先扣掉这一整帧的耗时，
-            // 帧时间一长（卡顿、编辑器在后台降帧）顿帧还没生效就已经结束了
+            // Applied immediately instead of waiting for the next Update: by the next frame a whole frame's time would already be deducted,
+            // and with a long frame (hitch, editor throttled in the background) the hit stop would end before it took effect
             Time.timeScale = feedback.hitStopTimeScale;
             hitStopStartedThisFrame = true;
         }
 
-        /// <summary>震屏：幅度 amount 格，按 shakeDecay 衰减。同时来的多次取最大的，不累加。</summary>
+        /// <summary>Screen shake: amplitude amount units, decaying by shakeDecay. Overlapping requests take the largest, they do not add up.</summary>
         public void Shake(float amount) => shake = Mathf.Max(shake, amount);
 
         void TickHitStop()
         {
             if (hitStopLeft <= 0f) return;
-            // 刚开始的顿帧先不扣时间：保证至少完整停住一帧，一帧比顿帧还长（卡顿）时也看得到定格
+            // A hit stop that just started is not counted down yet: guarantees at least one fully frozen frame, visible even when a frame is longer than the hit stop (hitch)
             if (hitStopStartedThisFrame) hitStopStartedThisFrame = false;
             else hitStopLeft -= Time.unscaledDeltaTime;
             Time.timeScale = hitStopLeft > 0f ? feedback.hitStopTimeScale : 1f;
@@ -114,7 +114,7 @@ namespace AnomalyArena
         void TickShake()
         {
             if (!cam) return;
-            // 用真实时间衰减：顿帧期间镜头照样在抖
+            // Decays in real time: the camera keeps shaking during hit stop
             shake = Mathf.MoveTowards(shake, 0f, feedback.shakeDecay * Time.unscaledDeltaTime);
             Vector2 o = shake > 0f ? UnityEngine.Random.insideUnitCircle * shake : Vector2.zero;
             cam.transform.position = camBase + new Vector3(o.x, 0f, o.y);
@@ -129,7 +129,7 @@ namespace AnomalyArena
             BeginPlaying();
         }
 
-        /// <summary>标题画面的 START 按钮 / 空格。</summary>
+        /// <summary>START button / Space on the title screen.</summary>
         public void BeginPlaying()
         {
             if (State != GameState.Title) return;
@@ -137,7 +137,7 @@ namespace AnomalyArena
             waves.StartWaves();
         }
 
-        /// <summary>标题画面切换白盒 / 美术版：记下开关，重新加载场景让所有物体按新模式生成。</summary>
+        /// <summary>Whitebox / illustrated switch on the title screen: store the flag and reload the scene so every object is created in the new mode.</summary>
         public void ToggleArt()
         {
             if (State != GameState.Title) return;
@@ -154,7 +154,7 @@ namespace AnomalyArena
             switch (State)
             {
                 case GameState.Title:
-                    // 鼠标点击交给界面上的按钮，避免点“切换美术”时顺便开局
+                    // Mouse clicks are left to the on-screen buttons, so clicking 'switch art' does not also start the game
                     if (kb != null && kb.spaceKey.wasPressedThisFrame) BeginPlaying();
                     else if (kb != null && kb.tKey.wasPressedThisFrame) ToggleArt();
                     break;
@@ -171,10 +171,10 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>第 3 波最后一个敌人被消灭时由 WaveManager 调用。</summary>
+        /// <summary>Called by WaveManager when the last enemy of wave 3 is eliminated.</summary>
         public void NotifyFinalWaveCleared() => finalWaveCleared = true;
 
-        /// <summary>一帧结束时统一判定胜负：玩家和最后一个敌人同一帧死亡，判胜利（待定）。</summary>
+        /// <summary>Win / lose is decided once at the end of the frame: if the player and the last enemy die in the same frame, it is a win (to be decided).</summary>
         void LateUpdate()
         {
             TickShake();
@@ -192,7 +192,7 @@ namespace AnomalyArena
             }
         }
 
-        // ───── 飞行物和特殊状态的统一清理 ─────
+        // ───── Unified cleanup of projectiles and special states ─────
 
         public void Register(MonoBehaviour t)
         {
@@ -201,7 +201,7 @@ namespace AnomalyArena
 
         public void Unregister(MonoBehaviour t) => transients.Remove(t);
 
-        /// <summary>切换波次、玩家死亡时：清掉所有飞行中的刀、尸体、导弹，结束钩子和冲刺。</summary>
+        /// <summary>On wave change or player death: remove all flying knives, corpses and missiles, and end hooks and dashes.</summary>
         public void ClearTransients()
         {
             var copy = transients.ToArray();
@@ -214,7 +214,7 @@ namespace AnomalyArena
             }
         }
 
-        // ───── 材质 ─────
+        // ───── Materials ─────
 
         public Material Mat(Color c)
         {

@@ -42,7 +42,7 @@ namespace AnomalyArena
             var knife = ArenaTestUtils.GiveWeapon(gm.player, WeaponType.Knife, EffectId.KnifeThrow);
             gm.player.TryUseWeapon();
             var thrown = (ThrownKnife)knife.InFlight;
-            // 没打到人时飞满 12 格才返回（约 0.67 秒），此时早已过了 0.3 秒的冷却，挡住再扔的只剩“飞刀还没回来”
+            // With no hit the knife flies the full 12 units before returning (about 0.67 s); the 0.3 s cooldown is long over by then, so the only thing blocking a second throw is 'the knife is not back yet'
             await ArenaTestUtils.WaitUntilAsync(() => thrown.Returning);
 
             var actual = gm.player.TryUseWeapon();

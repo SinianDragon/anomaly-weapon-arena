@@ -16,7 +16,7 @@ namespace AnomalyArena
         {
             var gm = await ArenaTestUtils.StartSandboxAsync();
             var p = gm.player;
-            // 从原点朝 -x 冲：左墙在 x ≈ -15.1 处，15 格一定撞得到；这一段没有缺口（西侧小缺口在 z -1.2 到 -2.8）
+            // Dash from the origin toward -x: the left wall is at x ≈ -15.1, so 15 units always reaches it; there is no gap on this stretch (the small west gap is at z -1.2 to -2.8)
             p.DebugSetAim(Vector3.left);
             ArenaTestUtils.GiveWeapon(p, WeaponType.Missile, EffectId.MissileSelfLaunch);
             float hpBefore = p.Hp;

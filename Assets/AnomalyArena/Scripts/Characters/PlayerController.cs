@@ -3,18 +3,18 @@ using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
-    /// <summary>玩家：WASD 移动、Shift 冲刺（耗体力）、鼠标瞄准、左键用武器（空手时出拳，连发武器可按住）、右键换武器。</summary>
+    /// <summary>Player: WASD to move, Shift to sprint (uses stamina), mouse to aim, left button to use the weapon (punch when unarmed; hold for repeating weapons), right button to swap weapons.</summary>
     public class PlayerController : Combatant
     {
-        [Header("Punch (空手基础攻击)")] public float punchDamage = 3f;
-        [Tooltip("从身体边缘算")] public float punchRange = 1.2f;
+        [Header("Punch (unarmed basic attack)")] public float punchDamage = 3f;
+        [Tooltip("Measured from the body edge")] public float punchRange = 1.2f;
         public float punchArc = 90f;
         public float punchKnockback = 3f;
         public float punchCooldown = 0.4f;
 
         [Header("Sprint")] public Stamina stamina = new Stamina();
 
-        // 冲刺时脚下冒尘土的间隔（秒）
+        // Interval between dust puffs while sprinting (seconds)
         const float SprintDustInterval = 0.07f;
 
         Vector3 aim = Vector3.forward;
@@ -22,10 +22,10 @@ namespace AnomalyArena
         float sprintMultiplier = 1f;
         float dustTimer;
 
-        /// <summary>自动化测试用：代替键盘，强制按住 / 松开冲刺键。</summary>
+        /// <summary>For automated tests: replaces the keyboard, forcing the sprint key held / released.</summary>
         [System.NonSerialized] public bool? debugSprintHeld;
 
-        /// <summary>自动化测试用：锁定瞄准方向，不再跟随鼠标。</summary>
+        /// <summary>For automated tests: locks the aim direction so it no longer follows the mouse.</summary>
         [System.NonSerialized] public bool debugLockAim;
 
         public Weapon NearPickup { get; private set; }
@@ -61,7 +61,7 @@ namespace AnomalyArena
                 if (Weapon == null) Punch();
                 else TryUseWeapon();
             }
-            // 连发武器：按住就按冷却间隔继续用（冷却没到时 TryUseWeapon 直接返回）
+            // Repeating weapons: holding keeps using it at the cooldown interval (TryUseWeapon returns early while on cooldown)
             else if (mouse.leftButton.isPressed && Weapon != null && Weapon.Effect && Weapon.Effect.holdToRepeat &&
                      Weapon.Revealed)
             {
@@ -71,7 +71,7 @@ namespace AnomalyArena
             if (mouse.leftButton.wasReleasedThisFrame) ReleaseWeapon();
         }
 
-        /// <summary>冲刺：按住 Shift 且在移动时，速度 ×2、消耗体力；不冲刺时回复。</summary>
+        /// <summary>Sprint: while Shift is held and the player is moving, speed ×2 and stamina drains; it recovers when not sprinting.</summary>
         void TickSprint(bool playing, Keyboard kb)
         {
             bool held = debugSprintHeld ?? (kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed));
@@ -114,7 +114,7 @@ namespace AnomalyArena
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 
-        /// <summary>空手出拳：只打前方小扇形里最近的一个人，扣血并撞飞。</summary>
+        /// <summary>Unarmed punch: hits only the nearest character in a small arc in front, dealing damage and knockback.</summary>
         void Punch()
         {
             if (State != CharacterState.Normal || weaponCooldown > 0f) return;
@@ -144,7 +144,7 @@ namespace AnomalyArena
             if (Weapon.Active != null && !Weapon.Active.CanSwap) return;
 
             var target = NearPickup;
-            // 钩着敌人时：先朝当前方向自动扔出去，再换，不额外扣次
+            // While holding a hooked enemy: throw it along the current direction first, then swap; no extra use is spent
             if (Weapon.Active != null) Weapon.Active.OnSwapAway();
             if (Weapon != null)
             {

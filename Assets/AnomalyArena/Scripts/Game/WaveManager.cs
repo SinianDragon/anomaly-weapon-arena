@@ -6,8 +6,8 @@ using Random = UnityEngine.Random;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 波次：每波固定数量的小型 / 大型敌人，场上同时最多 maxAlive 个，死一个补一个。
-    /// 出生前 1 秒地上出现红 X，离玩家至少 minSpawnDistance；玩家站上 X，改到别处出生。
+    /// Waves: a fixed number of small / large enemies per wave, at most maxAlive alive at once, one spawns as one dies.
+    /// A red X appears on the ground 1 second before a spawn, at least minSpawnDistance from the player; if the player stands on the X, the enemy spawns elsewhere.
     /// </summary>
     [DefaultExecutionOrder(100)]
     public class WaveManager : MonoBehaviour
@@ -25,13 +25,13 @@ namespace AnomalyArena
             new Wave { small = 8, large = 2 },
             new Wave { small = 15, large = 5 },
         };
-        [Tooltip("场上同时最多几个活着的敌人（待定）")] public int maxAlive = 12;
+        [Tooltip("Maximum number of enemies alive at once (to be decided)")] public int maxAlive = 12;
         public float spawnTelegraph = 1f;
         public float minSpawnDistance = 6f;
-        [Tooltip("连续出 X 的间隔")] public float spawnInterval = 0.25f;
+        [Tooltip("Interval between consecutive X markers")] public float spawnInterval = 0.25f;
         public float betweenWaveDelay = 2.5f;
-        [Tooltip("每波开始前把玩家血量回满")] public bool refillHpEachWave = true;
-        [Tooltip("不回满时，波间回多少血（不超过上限）")] public float waveHeal = 20f;
+        [Tooltip("Refill the player's HP before each wave")] public bool refillHpEachWave = true;
+        [Tooltip("When not refilling, HP restored between waves (capped at max)")] public float waveHeal = 20f;
 
         public Enemy smallPrefab;
         public Enemy largePrefab;
@@ -44,7 +44,7 @@ namespace AnomalyArena
         public IReadOnlyList<Enemy> Alive => alive;
         public int Kills { get; private set; }
 
-        readonly List<bool> queue = new List<bool>(); // true = 大型
+        readonly List<bool> queue = new List<bool>(); // true = large
         readonly List<SpawnMarker> markers = new List<SpawnMarker>();
         readonly List<Enemy> alive = new List<Enemy>();
         float spawnTimer;
@@ -86,7 +86,7 @@ namespace AnomalyArena
                 return;
             }
 
-            // 出 X：场上活着的 + 待出生的不超过上限
+            // Place an X: alive + pending spawns must not exceed the cap
             spawnTimer -= dt;
             if (queue.Count > 0 && alive.Count + markers.Count < maxAlive && spawnTimer <= 0f)
             {
@@ -108,7 +108,7 @@ namespace AnomalyArena
             {
                 var m = markers[i];
                 float r = m.large ? largePrefab.radius : smallPrefab.radius;
-                // 玩家站上 X：敌人改到别处出生
+                // The player stood on the X: the enemy spawns elsewhere
                 if (p.IsAlive && Query.Flat(p.Position - m.Position).magnitude < r + p.Radius)
                 {
                     m.MoveTo(FindSpawnPoint(m.large));
@@ -141,10 +141,10 @@ namespace AnomalyArena
                 GM.NotifyFinalWaveCleared();
                 return;
             }
-            // 切波不重置场上状态：飞行中的子弹 / 飞刀 / 导弹、钩子、冲刺都继续，玩家照常移动
+            // Changing waves does not reset the field: bullets / knives / missiles in flight, hooks and dashes continue, and the player keeps moving
             float before = GM.player.Hp;
             GM.player.Heal(refillHpEachWave ? GM.player.maxHp : waveHeal);
-            GM.weapons.SpawnForWave(WaveIndex + 1); // 下一波的补给：第 2 波 5 把、第 3 波 8 把
+            GM.weapons.SpawnForWave(WaveIndex + 1); // supply for the next wave (see WeaponSpawner.perWaveCounts)
             BetweenWaves = true;
             BetweenTimer = betweenWaveDelay;
             GM.hud.Banner($"Wave {WaveIndex + 1} cleared!", refillHpEachWave ? "HP fully restored" : $"HP +{Mathf.RoundToInt(GM.player.Hp - before)}");

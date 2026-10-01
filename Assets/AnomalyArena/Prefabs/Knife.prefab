@@ -50,8 +50,9 @@ MonoBehaviour:
   debugForceEffect: 0
   effect: {fileID: 0}
   revealed: 0
-  usesLeft: 0
+  usesLeft: 2
   maxUses: 0
+  roundsLeft: 0
 --- !u!1 &4498088364255321300
 GameObject:
   m_ObjectHideFlags: 0

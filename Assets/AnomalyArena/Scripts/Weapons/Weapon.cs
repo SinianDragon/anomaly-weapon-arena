@@ -7,7 +7,7 @@ namespace AnomalyArena
     public enum EffectId { None, GunSwing, GunReverseShot, KnifeThrow, KnifeHook, MissileHoming, MissileSelfLaunch }
 
     /// <summary>
-    /// 一把武器实例。生成时就定好效果；第一次被使用时揭晓；之后效果不再变，丢下再捡不重抽、不回复次数。
+    /// One weapon instance. Its effect is decided when it spawns and revealed on first use; after that the effect never changes, and dropping and picking it up again neither rerolls it nor restores uses.
     /// </summary>
     public class Weapon : MonoBehaviour
     {
@@ -15,7 +15,7 @@ namespace AnomalyArena
         public Transform visual;
 
         [Header("Debug")]
-        [Tooltip("强制这把武器的效果（只在揭晓前生效，必须是同类武器的效果）")]
+        [Tooltip("Forces this weapon's effect (only before reveal; must be an effect of the same weapon type)")]
         public EffectId debugForceEffect = EffectId.None;
 
         [Header("Runtime (read only)")]
@@ -23,17 +23,17 @@ namespace AnomalyArena
         [SerializeField] bool revealed;
         [SerializeField] int usesLeft;
         [SerializeField] int maxUses;
-        [Tooltip("当前弹夹里还剩几发（roundsPerUse > 1 的效果才有）")] [SerializeField] int roundsLeft;
+        [Tooltip("Rounds left in the current clip (only for effects with roundsPerUse > 1)")] [SerializeField] int roundsLeft;
 
         public WeaponEffect Effect => effect;
         public bool Revealed { get => revealed; set => revealed = value; }
         public int UsesLeft { get => usesLeft; set => usesLeft = value; }
         public int MaxUses => maxUses;
-        /// <summary>弹夹余量：打空了下一发才扣一次次数。丢下再捡保留。</summary>
+        /// <summary>Rounds left in the clip: a use is spent only on the next shot after it is empty. Kept when dropped and picked up again.</summary>
         public int RoundsLeft { get => roundsLeft; set => roundsLeft = value; }
-        /// <summary>扔出去还没回来的飞刀；不为空时这把武器不能再用、也不会因次数用完而消失。</summary>
+        /// <summary>The thrown knife that has not returned yet; while not null this weapon cannot be used and does not disappear when out of uses.</summary>
         public Projectile InFlight { get; set; }
-        /// <summary>进行中的持续流程（钩子、冲刺）。不为空时武器不会消失。</summary>
+        /// <summary>The ongoing routine (hook, dash). While not null the weapon does not disappear.</summary>
         public WeaponRuntime Active { get; set; }
         public IWeaponHolder Holder { get; private set; }
         public bool OnGround => Holder == null;
@@ -50,14 +50,14 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>地上与界面显示的名字：“Gun ?” 或 “Gun · Reverse Shot”。</summary>
+        /// <summary>Name shown on the ground and in the UI: 'Gun ?' or 'Gun · Reverse Shot'.</summary>
         public string Label => Revealed && effect ? $"{TypeName(type)} · {effect.displayName}" : $"{TypeName(type)} ?";
 
-        // 美术版：地上是立牌，拿在手里是平放的贴图
+        // Illustrated mode: a billboard on the ground, a flat texture when held
         Transform groundArt, heldArt;
         float groundArtHeight;
 
-        /// <summary>地上武器名字标签的锚点：美术版放在立牌顶上（沿镜头上方），不压在贴图上。</summary>
+        /// <summary>Anchor for the name label of a weapon on the ground: in illustrated mode it sits on top of the billboard (along the camera's up) so it does not cover the texture.</summary>
         public Vector3 LabelPoint(Camera cam)
         {
             if (groundArt && cam) return groundArt.position + cam.transform.up * (groundArtHeight + 0.45f);

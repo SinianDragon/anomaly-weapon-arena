@@ -174,3 +174,4 @@ MonoBehaviour:
   revealed: 0
   usesLeft: 0
   maxUses: 0
+  roundsLeft: 0

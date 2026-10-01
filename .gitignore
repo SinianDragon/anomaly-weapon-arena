@@ -108,15 +108,15 @@ InitTestScene*.unity*
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
-# ───── 本项目 ─────
-# 构建产物单独发布到 gh-pages 分支
+# ───── This project ─────
+# Build output is published separately on the gh-pages branch
 /Builds/
 /connectwebgl.zip
 /webgl_sharing
 .DS_Store
 
-# 这个工程是从 Unity 教程模板建的：只收录游戏本身和它必需的设置，
-# 教程素材留在本地、不进仓库
+# This project was created from a Unity tutorial template: only the game itself and the settings it needs are tracked;
+# tutorial assets stay local and are not committed
 /[Aa]ssets/*
 !/[Aa]ssets/AnomalyArena/
 !/[Aa]ssets/AnomalyArena.meta
@@ -129,7 +129,7 @@ InitTestScene*.unity*
 !/[Aa]ssets/SourceFiles/InputSystem.meta
 /.claude/
 
-# JetBrains Rider 的 IDE 设置（任意层级），属于个人环境，不进仓库
+# JetBrains Rider IDE settings (any level): personal environment, not committed
 .idea/
-# Codex 的个人配置
+# Personal Codex configuration
 .codex/

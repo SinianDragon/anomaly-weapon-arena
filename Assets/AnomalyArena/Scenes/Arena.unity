@@ -1522,6 +1522,7 @@ GameObject:
   m_Component:
   - component: {fileID: 923823468}
   - component: {fileID: 923823467}
+  - component: {fileID: 923823469}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -1609,6 +1610,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &923823469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 923823466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &955393712
 GameObject:
   m_ObjectHideFlags: 0
@@ -1890,27 +1920,27 @@ MonoBehaviour:
   defs:
   - type: 0
     prefab: {fileID: 5760506766707245888, guid: ec86f891b96fa467e82f3498ca88e4ce, type: 3}
-    uses: 6
+    uses: 5
     effectA: {fileID: 11400000, guid: 9eecc98f6f5d94ea8aa95b4f4aa0d4e7, type: 2}
     effectB: {fileID: 11400000, guid: 2f0e124017c8d4028b146c7804f7ff43, type: 2}
-    chanceA: 0.5
+    chanceA: 0.65
     forceOnSpawn: 0
   - type: 1
     prefab: {fileID: 3558745476027277093, guid: 17258b6c686824f9e81d3c11bfee7d19, type: 3}
-    uses: 4
+    uses: 3
     effectA: {fileID: 11400000, guid: bda9b3ef5890742d59b5ac5a76015d79, type: 2}
     effectB: {fileID: 11400000, guid: 256c31b68e3a14eff9f4e2533fd7bf7d, type: 2}
-    chanceA: 0.5
+    chanceA: 0.4
     forceOnSpawn: 0
   - type: 2
     prefab: {fileID: 330511716393445189, guid: 028e0ea1ca2d845f3963119e3d784078, type: 3}
-    uses: 2
+    uses: 1
     effectA: {fileID: 11400000, guid: 9ce1c65e71c114605a7a1ed311946b79, type: 2}
     effectB: {fileID: 11400000, guid: a71ac97445eef4012804eb1dd1e00ffb, type: 2}
-    chanceA: 0.5
+    chanceA: 0.4
     forceOnSpawn: 0
-  perWaveCounts: 030000000500000008000000i
-  groundCap: 12
+  perWaveCounts: 030000000400000005000000i
+  groundCap: 6
   pickupRadius: 1
   largeDropChance: 0.5
   dropIgnoresCap: 1

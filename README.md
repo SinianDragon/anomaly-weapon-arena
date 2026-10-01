@@ -1,20 +1,20 @@
-# Anomaly Weapon Arena（反常武器竞技场）
+# Anomaly Weapon Arena
 
-俯视角竞技场原型：捡起外形熟悉、功能要第一次用了才揭晓的武器，清完三波敌人，或者把它们打进缺口。
+A top-down arena prototype: pick up weapons that look familiar but only reveal what they do the first time you use them, then clear three waves of enemies or knock them into the gaps.
 
-- 在线试玩（GitHub Pages）：https://siniandragon.github.io/anomaly-weapon-arena/
-- 引擎：Unity 6000.6.3f1 + URP，目标平台 WebGL
-- 游戏内全英文；标题画面可以在白盒 / 美术版之间切换（ART 按钮或 T 键），默认白盒
+- Play online (GitHub Pages): https://siniandragon.github.io/anomaly-weapon-arena/
+- Engine: Unity 6000.6.3f1 + URP, target platform WebGL
+- All in-game text is in English; the title screen can switch between whitebox and illustrated mode (ART button or the T key). Whitebox is the default.
 
-## 打开工程
+## Opening the project
 
-1. 用 Unity Hub 添加这个文件夹，编辑器版本选 6000.6.3f1。
-2. 打开 `Assets/AnomalyArena/Scenes/Arena.unity`，点 ▶ 运行。
-3. 需要重建场景或打包时，用菜单 **Anomaly Arena → 1. Build Whitebox Scene / 2. Build WebGL**；不想重建场景、只想套用最新改动时用 **3. Update Existing Scene**。
+1. Add this folder in Unity Hub and choose editor version 6000.6.3f1.
+2. Open `Assets/AnomalyArena/Scenes/Arena.unity` and press ▶.
+3. To rebuild the scene or make a build, use the menu **Anomaly Arena → 1. Build Whitebox Scene / 2. Build WebGL**; to apply the latest changes without rebuilding the scene, use **3. Update Existing Scene**.
 
-代码结构、调数值的方式和待定项的暂定处理见 [`Assets/AnomalyArena/README.md`](Assets/AnomalyArena/README.md)。
+Code structure, how to tune values, and how open questions are currently handled are described in [`Assets/AnomalyArena/README.md`](Assets/AnomalyArena/README.md).
 
-## 仓库内容
+## What is in the repository
 
-只收录游戏本身（`Assets/AnomalyArena/`）、它必需的渲染与输入设置（`Assets/SourceFiles/Settings`、`Assets/SourceFiles/InputSystem`）、`Packages/` 和 `ProjectSettings/`。
-网页版构建放在 `gh-pages` 分支。
+Only the game itself (`Assets/AnomalyArena/`), the rendering and input settings it needs (`Assets/SourceFiles/Settings`, `Assets/SourceFiles/InputSystem`), `Packages/` and `ProjectSettings/`.
+The web build lives on the `gh-pages` branch.

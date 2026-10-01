@@ -3,9 +3,9 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 枪 · 反向射击：子弹朝瞄准方向的反方向飞；开枪的人被往瞄准方向推。按住左键连发，一次次数 = 一个弹夹。
-    /// 反噬：面朝缺口开枪会把自己推下去。利用：背对敌人开枪，后坐力当冲刺。
-    /// 后坐力走 Push（叠加在移动上），不进入被撞飞状态：否则每发之后都要等撞飞结束才能再开枪，射击一顿一顿的。
+    /// Gun · Reverse Shot: bullets fly opposite to the aim direction; the shooter is pushed toward the aim direction. Hold the left button to keep firing; one use = one clip.
+    /// Backfire: firing while facing a gap pushes you in. Exploit: fire with your back to the enemies and use the recoil as a dash.
+    /// Recoil uses Push (added on top of movement) and does not enter the knocked state: otherwise each shot would have to wait for the knockback to end and firing would stutter.
     /// </summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/Effects/Gun Reverse Shot")]
     public class GunReverseShotEffect : WeaponEffect
@@ -13,7 +13,7 @@ namespace AnomalyArena
         public float damage = 10f;
         public float bulletSpeed = 25f;
         public float bulletRange = 40f;
-        [Tooltip("每发后坐力把开枪的人推多远（逐发叠加；撞墙不扣血，推下缺口照样掉）")] public float recoilDistance = 0.8f;
+        [Tooltip("How far each shot's recoil pushes the shooter (stacks per shot; no wall damage, but can push you into a gap)")] public float recoilDistance = 0.8f;
 
         public override void Use(Weapon weapon, IWeaponHolder user)
         {

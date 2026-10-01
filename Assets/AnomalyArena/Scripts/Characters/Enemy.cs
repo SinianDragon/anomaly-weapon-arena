@@ -3,27 +3,27 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 敌人：一直追玩家，几乎贴到玩家身上才开始蓄力挥拳（身体变黄），蓄力时方向锁定、原地不动。
-    /// 蓄完朝锁定方向挥拳：玩家这时还在拳头的扇形范围内才扣血，所以看到变黄就走开可以躲掉。碰到玩家本身不扣血。
-    /// 如果玩家钩住的敌人挡在拳头范围内，先打它（掩体）。这一版敌人不捡武器。
+    /// Enemy: always chases the player and only starts winding up a punch when almost touching (body turns yellow). During wind-up its facing is locked and it stands still.
+    /// After the wind-up it punches along the locked direction: the player only takes damage if still inside the punch arc, so walking away on yellow dodges it. Touching the player does no damage.
+    /// If an enemy hooked by the player is inside the punch arc, it is hit first (cover). Enemies do not pick up weapons in this version.
     /// </summary>
     public class Enemy : Combatant
     {
         [Header("Attack")]
         public float attackDamage = 5f;
-        [Tooltip("离玩家身体边缘多近才开始蓄力（几乎贴上）")] public float triggerRange = 0.3f;
-        [Tooltip("拳头落下时的判定距离，从身体边缘算；蓄力期间玩家走出这个距离就躲开了")] public float attackRange = 0.8f;
-        [Tooltip("拳头的扇形角度，朝向在开始蓄力时锁定")] public float attackArc = 120f;
+        [Tooltip("How close to the player's body edge before winding up (almost touching)")] public float triggerRange = 0.3f;
+        [Tooltip("Hit distance when the punch lands, from the body edge; the player dodges by leaving this range during the wind-up")] public float attackRange = 0.8f;
+        [Tooltip("Arc of the punch in degrees; facing is locked when the wind-up starts")] public float attackArc = 120f;
         public float windupTime = 0.5f;
         public float attackInterval = 1f;
-        [Tooltip("打中玩家时把玩家撞飞的距离")] public float attackKnockback = 5f;
+        [Tooltip("How far the player is knocked back when hit")] public float attackKnockback = 5f;
 
         [Header("Look")]
         public Material normalMaterial;
         public Material windupMaterial;
 
         [Header("Type")]
-        [Tooltip("大型敌人：掉武器、血条更宽、用大型贴图（不再按半径判断）")] public bool large;
+        [Tooltip("Large enemy: drops weapons, wider HP bar, uses the large textures (no longer decided by radius)")] public bool large;
 
         public bool IsLarge => large;
         public bool WindingUp => windup;
@@ -52,10 +52,10 @@ namespace AnomalyArena
 
             if (windup)
             {
-                // 方向已锁定，不再跟着玩家转
+                // Facing is locked; it no longer turns with the player
                 Stop();
                 windupTimer -= dt;
-                // 蓄力中一闪一闪：有发光版就让发光版忽明忽暗，没有就把立牌染黄
+                // Blink during wind-up: pulse the glowing billboard if there is one, otherwise tint the billboard yellow
                 float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 30f);
                 if (artWindupSprite) Art.Tint(artWindupSprite, Color.Lerp(Color.white, new Color(1.35f, 1.3f, 1.1f), pulse));
                 else if (artSprite) Art.Tint(artSprite, Color.Lerp(Color.white, new Color(1f, 0.85f, 0.2f), pulse));
@@ -92,7 +92,7 @@ namespace AnomalyArena
             var arc = Art.On ? Art.Set.enemyPunchArc : null;
             if (arc)
             {
-                // 美术版：拳头前方闪一道弧光（贴图右边 = 拳头方向），长度约等于拳头的判定距离
+                // Illustrated mode: an arc flash in front of the fist (right side of the texture = punch direction), about as long as the punch range
                 float reach = radius + attackRange;
                 Fx.SpriteFlat(arc, Query.AtCastHeight(Position) + facing * (reach * 0.7f), facing, reach * 1.4f, 0.2f);
             }
@@ -104,7 +104,7 @@ namespace AnomalyArena
             var shield = p.HeldShield;
             if (shield != null && shield != this && InFist(shield))
             {
-                // 打在掩体上不撞飞（距离 0），但给出方向让碎片朝外溅
+                // Hitting cover does not knock it back (distance 0), but a direction is passed so shards fly outward
                 shield.ReceiveDamage(DamageInfo.Attack(attackDamage, this, shield.Position - Position));
                 return;
             }
@@ -112,7 +112,7 @@ namespace AnomalyArena
                 p.ReceiveDamage(DamageInfo.Attack(attackDamage, this, p.Position - Position, attackKnockback));
         }
 
-        /// <summary>目标在拳头的扇形里：边缘距离不超过 attackRange，且在锁定方向左右 attackArc/2 以内（贴身时不看角度）。</summary>
+        /// <summary>Target is inside the punch arc: edge distance within attackRange and within attackArc/2 of the locked direction (angle ignored when touching).</summary>
         bool InFist(Combatant c)
         {
             Vector3 to = Query.Flat(c.Position - Position);
@@ -122,8 +122,8 @@ namespace AnomalyArena
         }
 
         /// <summary>
-        /// 自己走路时不会主动走下缺口；只有被撞飞、被扔才会掉下去。
-        /// 下一步会离开平台（离边不到一个身位）时，先试着只沿 x 或只沿 z 走（贴着边滑），都不行就停下。
+        /// When walking on its own it never walks off into a gap; it only falls when knocked back or thrown.
+        /// If the next step would leave the platform (less than a body from the edge), it first tries moving along x only or z only (sliding along the edge), and stops if neither works.
         /// </summary>
         Vector3 KeepOffEdges(Vector3 v, float dt)
         {

@@ -19,7 +19,7 @@ namespace AnomalyArena
         [Test]
         public void Contains_PointBeyondTheIrregularEdge_ReturnsFalse()
         {
-            // 左下角 V12 (-16, -11) 和 V0 (-11, -15) 之间是斜切掉的角：正方形里的 (-15, -14) 在新形状外面
+            // Between the bottom-left V12 (-16, -11) and V0 (-11, -15) the corner is chamfered: (-15, -14), inside the square, is outside the new shape
             var actual = ArenaShape.Contains(new Vector2(-15f, -14f));
 
             Assert.That(actual, Is.False);

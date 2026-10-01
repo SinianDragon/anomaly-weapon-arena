@@ -3,8 +3,8 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 武器效果的基类。每种效果是一个单独的脚本，数值存在 ScriptableObject 资源里，调数值不用改代码。
-    /// 效果只通过 IWeaponHolder 操作使用者。
+    /// Base class for weapon effects. Each effect is a separate script with its values stored in a ScriptableObject asset, so tuning needs no code changes.
+    /// Effects act on the user only through IWeaponHolder.
     /// </summary>
     public abstract class WeaponEffect : ScriptableObject
     {
@@ -13,15 +13,15 @@ namespace AnomalyArena
         public WeaponType type;
         public string displayName;
         [TextArea] public string description;
-        [Tooltip("两次使用之间的最短间隔")] public float cooldown = 0.3f;
-        [Tooltip("按住左键时按 cooldown 的间隔自动连续使用")] public bool holdToRepeat;
-        [Tooltip("扣一次次数能用几下（弹夹容量）；1 = 每下都扣次")] [Min(1)] public int roundsPerUse = 1;
+        [Tooltip("Minimum interval between two uses")] public float cooldown = 0.3f;
+        [Tooltip("While the left button is held, keeps using it automatically at the cooldown interval")] public bool holdToRepeat;
+        [Tooltip("Shots per use (clip size); 1 = every shot spends a use")] [Min(1)] public int roundsPerUse = 1;
 
         public abstract void Use(Weapon weapon, IWeaponHolder user);
     }
 
     /// <summary>
-    /// 一次使用后还要持续一段时间的流程（钩子、冲刺）。进行中武器不会消失，结束后再检查次数。
+    /// A routine that keeps running for a while after one use (hook, dash). The weapon does not disappear while it runs; uses are checked again when it ends.
     /// </summary>
     public abstract class WeaponRuntime : MonoBehaviour
     {
@@ -41,16 +41,16 @@ namespace AnomalyArena
             GameManager.Instance.Register(this);
         }
 
-        /// <summary>流程中再按左键（钩子：投掷）。</summary>
+        /// <summary>Left click again during the routine (hook: throw).</summary>
         public virtual void OnUsePressed() { }
 
-        /// <summary>流程中松开左键（蓄力挥砍：挥出）。</summary>
+        /// <summary>Left button released during the routine (Charge Swing: swing).</summary>
         public virtual void OnUseReleased() { }
 
-        /// <summary>流程中按右键换武器（钩子：先自动扔出去）。</summary>
+        /// <summary>Right-click swap during the routine (hook: throws automatically first).</summary>
         public virtual void OnSwapAway() { }
 
-        /// <summary>切换波次、玩家死亡时强制清理。</summary>
+        /// <summary>Forced cleanup on wave change or player death.</summary>
         public virtual void Cancel() => Finish();
 
         protected void Finish()
@@ -64,7 +64,7 @@ namespace AnomalyArena
         }
     }
 
-    /// <summary>飞行物（子弹、飞刀、导弹）。切换波次、玩家死亡时统一清掉。</summary>
+    /// <summary>Projectile (bullet, throwing knife, missile). Cleaned up together on wave change or player death.</summary>
     public abstract class Projectile : MonoBehaviour, IDamageDealer
     {
         public IWeaponHolder Owner { get; protected set; }
@@ -87,7 +87,7 @@ namespace AnomalyArena
             return go.transform;
         }
 
-        /// <summary>白盒阶段也要看得出往哪飞：拖一条线。</summary>
+        /// <summary>Even in whitebox the flight direction has to be readable: draws a trail line.</summary>
         protected TrailRenderer AddTrail(Color c, float width)
         {
             var tr = gameObject.AddComponent<TrailRenderer>();
