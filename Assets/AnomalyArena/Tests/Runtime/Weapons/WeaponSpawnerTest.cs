@@ -9,8 +9,8 @@ namespace AnomalyArena
     public class WeaponSpawnerTest
     {
         [TestCase(0, 3)]
-        [TestCase(1, 5)]
-        [TestCase(2, 8)]
+        [TestCase(1, 4)]
+        [TestCase(2, 5)]
         [LoadScene(ArenaTestUtils.ArenaScene)]
         [Timeout(10000)]
         public async Task CountForWave_ArenaSceneSupply_ReturnsDesignedCount(int waveIndex, int expected)

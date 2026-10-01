@@ -174,7 +174,7 @@ namespace AnomalyArena.EditorTools
 
         /// <summary>
         /// Update without rebuilding the scene: refresh effect names / descriptions, generate the art set and assign it to the scene's GameManager,
-        /// switch the enemy prefabs to the close-range punch values, shrink the large enemy to twice the small one, and set weapon supply to 3 / 5 / 8 per wave. All other tuned values are kept.
+        /// switch the enemy prefabs to the close-range punch values, shrink the large enemy to twice the small one, and set weapon supply to 3 / 4 / 5 per wave (cap 6). All other tuned values are kept.
         /// </summary>
         [MenuItem("Anomaly Arena/3. Update Existing Scene (texts, art, enemies, weapon supply)")]
         public static void UpdateExisting()
@@ -197,10 +197,10 @@ namespace AnomalyArena.EditorTools
             var gm = Object.FindAnyObjectByType<GameManager>();
             gm.art = art;
             EditorUtility.SetDirty(gm);
-            // Ground cap raised to 12 so the 8 weapons of wave 3 fit
+            // Supply per wave and ground cap (same as the WeaponSpawner defaults)
             var spawner = Object.FindAnyObjectByType<WeaponSpawner>();
-            spawner.perWaveCounts = new[] { 3, 5, 8 };
-            spawner.groundCap = 12;
+            spawner.perWaveCounts = new[] { 3, 4, 5 };
+            spawner.groundCap = 6;
             EditorUtility.SetDirty(spawner);
             EditorSceneManager.SaveScene(scene);
             PlayerSettings.productName = "Anomaly Weapon Arena";
