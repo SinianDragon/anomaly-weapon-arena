@@ -3,16 +3,16 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 平台的形状：一个不规则多边形（逆时针，俯视 x 向右、z 向上），墙沿着边建在外侧，缺口是边上不建墙的一段。
-    /// 编辑器生成场景（ArenaSetup）和游戏逻辑（出生点、武器位置、敌人不走下边缘、钩子限位）共用这一份数据。
+    /// Shape of the platform: an irregular polygon (counter-clockwise; top-down, x right, z up). Walls are built along the outside of the edges; a gap is a stretch of an edge with no wall.
+    /// The editor scene builder (ArenaSetup) and the game logic (spawn points, weapon positions, enemies not walking off the edge, hook limits) share this one data set.
     /// </summary>
     public static class ArenaShape
     {
-        /// <summary>多边形顶点。有斜切的角，也有向内凹的边（V1、V11），外接范围和原来的 30 × 30 差不多，镜头不用动。</summary>
+        /// <summary>Polygon vertices. Some corners are chamfered and two edges bend inward (V1, V11). The bounding area is about the same as the original 30 × 30, so the camera did not need to move.</summary>
         public static readonly Vector2[] Vertices =
         {
             new Vector2(-11f, -15f),   // V0
-            new Vector2(-3f, -13.5f),  // V1 底边向内凹
+            new Vector2(-3f, -13.5f),  // V1 bottom edge bends inward
             new Vector2(9f, -15f),     // V2
             new Vector2(14f, -11f),    // V3
             new Vector2(16f, -4f),     // V4
@@ -22,23 +22,23 @@ namespace AnomalyArena
             new Vector2(-8f, 14f),     // V8
             new Vector2(-13.5f, 10.5f), // V9
             new Vector2(-15.5f, 2f),   // V10
-            new Vector2(-14f, -6f),    // V11 左边向内凹
+            new Vector2(-14f, -6f),    // V11 left edge bends inward
             new Vector2(-16f, -11f),   // V12
         };
 
         public struct Gap
         {
             public string name;
-            /// <summary>在第几条边上（边 i 从顶点 i 到顶点 i+1）。</summary>
+            /// <summary>Which edge it is on (edge i goes from vertex i to vertex i+1).</summary>
             public int edge;
-            /// <summary>缺口中点离边起点的距离，负数表示边的正中间。</summary>
+            /// <summary>Distance from the edge start to the gap midpoint; negative means the middle of the edge.</summary>
             public float center;
             public float width;
         }
 
-        // 小缺口：比玩家和小型敌人（直径 1）宽、比大型敌人（直径 2）窄，大型会卡住
+        // Small gap: wider than the player and small enemies (diameter 1), narrower than large enemies (diameter 2), so large ones get stuck
         public const float SmallGapWidth = 1.6f;
-        // 大缺口：所有人都会掉下去
+        // Large gap: everyone falls through
         public const float LargeGapWidth = 7f;
 
         public static readonly Gap[] Gaps =
@@ -56,14 +56,14 @@ namespace AnomalyArena
         public static float EdgeLength(int i) => (EdgeEnd(i) - EdgeStart(i)).magnitude;
         public static Vector2 EdgeDirection(int i) => (EdgeEnd(i) - EdgeStart(i)).normalized;
 
-        /// <summary>边的外法线（逆时针多边形：沿边前进方向的右手边朝外）。</summary>
+        /// <summary>Outward normal of an edge (counter-clockwise polygon: the right-hand side of the travel direction points outward).</summary>
         public static Vector2 EdgeOutward(int i)
         {
             Vector2 d = EdgeDirection(i);
             return new Vector2(d.y, -d.x);
         }
 
-        /// <summary>缺口在它那条边上的起止距离。</summary>
+        /// <summary>Start and end distance of a gap along its edge.</summary>
         public static (float from, float to) GapRange(Gap g)
         {
             float len = EdgeLength(g.edge);
@@ -74,7 +74,7 @@ namespace AnomalyArena
         public static Vector3 ToWorld(Vector2 p, float y = 0f) => new Vector3(p.x, y, p.y);
         public static Vector2 ToPlane(Vector3 p) => new Vector2(p.x, p.z);
 
-        /// <summary>点在多边形内（射线法，凹多边形也成立）。</summary>
+        /// <summary>Whether a point is inside the polygon (ray casting; also valid for concave polygons).</summary>
         public static bool Contains(Vector2 p)
         {
             bool inside = false;
@@ -86,7 +86,7 @@ namespace AnomalyArena
             return inside;
         }
 
-        /// <summary>点到多边形边界的最短距离。</summary>
+        /// <summary>Shortest distance from a point to the polygon boundary.</summary>
         public static float DistanceToEdge(Vector2 p)
         {
             float best = float.MaxValue;
@@ -94,14 +94,14 @@ namespace AnomalyArena
             return best;
         }
 
-        /// <summary>在多边形内，并且离每条边都至少 margin（例如角色半径）。</summary>
+        /// <summary>Inside the polygon and at least margin away from every edge (e.g. a character radius).</summary>
         public static bool ContainsWithMargin(Vector3 world, float margin)
         {
             Vector2 p = ToPlane(world);
             return Contains(p) && DistanceToEdge(p) >= margin;
         }
 
-        /// <summary>把点拉回多边形内、离边至少 margin：已经满足就原样返回；否则移到最近的边上再往里推 margin。</summary>
+        /// <summary>Pulls a point back inside the polygon, at least margin from the edges: returned unchanged if already valid; otherwise moved to the nearest edge and pushed inward by margin.</summary>
         public static Vector3 ClampInside(Vector3 world, float margin)
         {
             if (ContainsWithMargin(world, margin)) return world;
@@ -119,7 +119,7 @@ namespace AnomalyArena
             return new Vector3(q.x, world.y, q.y);
         }
 
-        /// <summary>多边形内随机一点，离边至少 margin（用外接矩形拒绝采样）。</summary>
+        /// <summary>A random point inside the polygon, at least margin from the edges (rejection sampling over the bounding rectangle).</summary>
         public static Vector3 RandomInside(float margin)
         {
             Vector2 min = Vertices[0], max = Vertices[0];
@@ -133,7 +133,7 @@ namespace AnomalyArena
                 var w = new Vector3(Random.Range(min.x, max.x), 0f, Random.Range(min.y, max.y));
                 if (ContainsWithMargin(w, margin)) return w;
             }
-            return Vector3.zero; // 几乎不会发生：多边形中心附近是空地
+            return Vector3.zero; // practically never happens: the area around the polygon center is open floor
         }
 
         static Vector2 ClosestOnEdge(int i, Vector2 p)

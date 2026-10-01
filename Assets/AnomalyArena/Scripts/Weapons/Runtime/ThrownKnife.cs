@@ -4,13 +4,13 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 飞刀流程：
-    ///   Outbound  进：出手。沿瞄准方向直线飞。出：打中人 → Seeking（或打满 → Returning）；撞墙 / 飞满 range → Returning。
-    ///   Seeking   进：打中一个人后找到下一个目标。每帧朝目标当前位置飞。
-    ///             出：打中人 → 再找下一个（打满 maxTargets 或找不到 → Returning）；目标没了 / 中间隔墙 → 重新找或 Returning。
-    ///   Returning 进：开始返回，记下使用者那一刻的位置（锁定点），之后朝这个点飞；到达后消失，这把刀才能再扔。
-    /// 每个人只会被同一把飞刀打中一次。打死的第一个敌人被带着一起飞；带着尸体返回时路上碰到的人（包括使用者）
-    /// 按尸体生前的攻击伤害扣血并被撞飞。
+    /// Throwing knife routine:
+    ///   Outbound  enter: thrown. Flies straight along the aim direction. exit: hit a character → Seeking (or max reached → Returning); hit a wall / flew the full range → Returning.
+    ///   Seeking   enter: found the next target after a hit. Flies toward the target's current position each frame.
+    ///             exit: hit a character → look for the next (maxTargets reached or none found → Returning); target gone / wall in between → look again or Returning.
+    ///   Returning enter: starts returning and records the user's position at that moment (lock point), then flies to that point; disappears on arrival, and only then can the knife be thrown again.
+    /// Each character is hit by the same thrown knife at most once. The first enemy killed is carried along; while returning with a corpse, characters on the way (including the user)
+    /// take that corpse's attack damage when alive and are knocked back.
     /// </summary>
     public class ThrownKnife : Projectile
     {
@@ -21,7 +21,7 @@ namespace AnomalyArena
             Returning
         }
 
-        // 碰撞半径：刀身离角色身体边缘多近算打中
+        // Collision radius: how close the blade must be to a character's body edge to count as a hit
         const float HitRadius = 0.35f;
 
         KnifeThrowEffect cfg;
@@ -40,7 +40,7 @@ namespace AnomalyArena
         readonly HashSet<Combatant> struck = new HashSet<Combatant>();
         readonly HashSet<Combatant> hitOnReturn = new HashSet<Combatant>();
 
-        /// <summary>已经打中了几个人（测试和界面用）。</summary>
+        /// <summary>How many characters have been hit so far (for tests and UI).</summary>
         public int Hits => hits;
 
         public bool Returning => phase == Phase.Returning;
@@ -54,7 +54,7 @@ namespace AnomalyArena
             pos = Query.AtCastHeight(start);
             dir = Query.Flat(direction).normalized;
             phase = Phase.Outbound;
-            // 刀身在空中旋转、拖尾很短：一眼看得出是扔出去的一把刀，而不是钩子那种伸长的刀身
+            // The blade spins in the air with a very short trail: it reads at a glance as a thrown knife, not the stretched blade of the hook
             spinner = new GameObject("Spin").transform;
             spinner.SetParent(transform, false);
             if (Art.On && Art.Set.knife) Art.Flat(spinner, Art.Set.knife, 1.6f, Art.OrderProjectile, out _);
@@ -95,7 +95,7 @@ namespace AnomalyArena
             UpdateTransform();
         }
 
-        /// <summary>沿 dir 飞 step：撞墙 → 返回；碰到没打过的人 → 打中。返回 false 表示这一步已经转入返回或别的阶段。</summary>
+        /// <summary>Flies step along dir: hits a wall → return; touches a character not yet hit → hit. Returns false when this step has switched to returning or another phase.</summary>
         bool Advance(float step)
         {
             Vector3 next = pos + dir * step;
@@ -118,7 +118,7 @@ namespace AnomalyArena
             return true;
         }
 
-        /// <summary>能打的目标：活着、不是扔刀的人、这把刀还没打过。</summary>
+        /// <summary>A valid target: alive, not the thrower, and not yet hit by this knife.</summary>
         bool ValidTarget(Combatant c) => c != null && c.IsAlive && (IWeaponHolder)c != Owner && !struck.Contains(c);
 
         void Strike(Combatant c)
@@ -133,7 +133,7 @@ namespace AnomalyArena
             if (hits >= cfg.maxTargets || !SeekNext(at)) StartReturn();
         }
 
-        /// <summary>在 from 附近 bounceRange 内找最近的、中间不隔墙的下一个目标。</summary>
+        /// <summary>Finds the nearest next target within bounceRange of from with no wall in between.</summary>
         bool SeekNext(Vector3 from)
         {
             seekTarget = null;
@@ -153,14 +153,14 @@ namespace AnomalyArena
             return true;
         }
 
-        /// <summary>朝锁定点飞；带着尸体时撞人。到达后销毁并返回 true。</summary>
+        /// <summary>Flies toward the lock point; hits characters when carrying a corpse. Destroys itself on arrival and returns true.</summary>
         bool TickReturn(float step)
         {
             Vector3 to = Query.Flat(lockPoint - pos);
             if (to.magnitude <= step)
             {
                 pos = lockPoint;
-                Destroy(gameObject); // 飞刀（和尸体）到达返回点后消失，这把刀可以再扔
+                Destroy(gameObject); // the knife (and corpse) disappears at the return point; the knife can be thrown again
                 return true;
             }
 
@@ -180,13 +180,13 @@ namespace AnomalyArena
         {
             corpseDamage = damage;
             corpseRadius = r;
-            // 美术版优先用“趴着、背上插着刀”的尸体图；没有就用敌人立牌躺平变灰
+            // Illustrated mode prefers the 'face down, knife in its back' corpse image; otherwise the enemy billboard laid flat and greyed
             bool large = c is Enemy e && e.IsLarge;
             var corpseTex = Art.On ? (large ? Art.Set.corpseLarge : Art.Set.corpseSmall) : null;
             var enemyTex = corpseTex ? corpseTex : Art.On ? (large ? Art.Set.enemyLarge : Art.Set.enemySmall) : null;
             if (enemyTex)
             {
-                // 美术版：敌人贴图躺平、变灰，拖在刀后面
+                // Illustrated mode: enemy texture laid flat and greyed, dragged behind the knife
                 corpse = Art.Flat(transform, enemyTex, r * 2.6f, Art.OrderProjectile, out var cr,
                     new Vector3(0f, 0.1f - Query.CastHeight, -r));
                 if (!corpseTex) Art.Tint(cr, new Color(0.55f, 0.5f, 0.5f));
@@ -198,7 +198,7 @@ namespace AnomalyArena
                 corpse.localRotation = Quaternion.Euler(90f, 0f, 0f);
             }
 
-            // 被带着的尸体返回途中不会再撞到自己
+            // The carried corpse does not hit itself on the way back
             hitOnReturn.Add(c);
         }
 
@@ -229,7 +229,7 @@ namespace AnomalyArena
         {
             base.OnDestroy();
             if (lockMarker) Destroy(lockMarker);
-            // 飞刀消失（到达返回点，或死亡 / 胜利时被统一清理）后，这把刀才能再扔；次数用完的刀这时才消失
+            // The knife can only be thrown again after the thrown one disappears (reached the return point, or cleaned up on death / victory); a knife with no uses left disappears only then
             if (weapon && weapon.InFlight == this)
             {
                 weapon.InFlight = null;

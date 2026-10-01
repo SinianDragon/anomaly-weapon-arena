@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    /// <summary>反向射击的子弹：打中第一个敌人扣血后消失，碰墙消失。</summary>
+    /// <summary>Reverse Shot bullet: damages the first enemy it hits and disappears; also disappears on walls.</summary>
     public class Bullet : Projectile
     {
         GunReverseShotEffect cfg;
@@ -19,7 +19,7 @@ namespace AnomalyArena
             transform.rotation = Quaternion.LookRotation(dir);
             if (Art.On && Art.Set.bullet)
             {
-                // 美术版：弹头朝右、自带拖尾的子弹贴图，平放、指向飞行方向（拖尾在身后）
+                // Illustrated mode: a bullet texture with its tip pointing right and a built-in trail, lying flat and pointing along the flight direction (trail behind)
                 Art.Flat(transform, Art.Set.bullet, 1.3f, Art.OrderProjectile, out _, new Vector3(0f, 0f, -0.4f));
             }
             else

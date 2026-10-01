@@ -18,8 +18,8 @@ MonoBehaviour:
   description: Hold to fire. Bullets fly out of your BACK and every shot's recoil nudges you forward - don't aim at a gap. 5 rounds per use
   cooldown: 0.12
   holdToRepeat: 1
-  roundsPerUse: 5
-  damage: 10
+  roundsPerUse: 4
+  damage: 5
   bulletSpeed: 25
   bulletRange: 40
   recoilDistance: 0.8

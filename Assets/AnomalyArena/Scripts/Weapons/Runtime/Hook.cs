@@ -3,12 +3,12 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 钩子流程：伸出 → 拉回（随鼠标甩）→ 黏住（掩体）→ 投掷，或者没钩到 → 收回。
-    /// 状态进入 / 退出：
-    ///   Extend  进：按左键。出：钩到角色 → Pull；碰墙或伸满 → Retract。
-    ///   Pull    进：钩到角色，目标进入 Hooked。出：拉到身前 → Hold；目标失效 → Retract。
-    ///   Hold    进：拉到身前。出：左键或右键换武器 → 投掷结束；目标死亡 → 结束。
-    ///   Retract 进：没钩到。出：收回到 0 → 结束。
+    /// Hook routine: extend → pull (swings with the mouse) → hold (cover) → throw, or miss → retract.
+    /// State enter / exit:
+    ///   Extend  enter: left click. exit: hooked a character → Pull; hit a wall or fully extended → Retract.
+    ///   Pull    enter: hooked a character, target enters Hooked. exit: pulled in front → Hold; target invalid → Retract.
+    ///   Hold    enter: pulled in front. exit: left click or right-click swap → throw and end; target dies → end.
+    ///   Retract enter: missed. exit: retracted to 0 → end.
     /// </summary>
     public class Hook : WeaponRuntime
     {
@@ -40,7 +40,7 @@ namespace AnomalyArena
             phase = Phase.Extend;
             if (Art.On && Art.Set.hookMid)
             {
-                // 美术版：刀柄和刀尖不变，中段随长度拉长；白盒方块藏起来
+                // Illustrated mode: hilt and tip stay fixed, the middle stretches with length; the whitebox box is hidden
                 GetComponent<Renderer>().enabled = false;
                 blade = new StretchBlade(Art.Set, 0.55f);
             }
@@ -72,7 +72,7 @@ namespace AnomalyArena
                     length = Mathf.Min(length + cfg.extendSpeed * dt, cfg.range);
                     Vector3 origin = Query.AtCastHeight(user.Position);
                     int mask = GameManager.WallMask | GameManager.CharacterMask;
-                    // 从使用者体内出发，SphereCast 会自动忽略使用者自己
+                    // Starts inside the user's body; SphereCast ignores the user automatically
                     if (Physics.SphereCast(origin, cfg.hookRadius, dir, out var hit, length, mask,
                             QueryTriggerInteraction.Ignore))
                     {
@@ -106,7 +106,7 @@ namespace AnomalyArena
                         break;
                     }
 
-                    // 拉的过程中移动鼠标，敌人跟着甩向那一边；拉回途中不会掉进缺口（Hooked 忽略 FallZone）
+                    // Moving the mouse while pulling swings the enemy to that side; it cannot fall into a gap while being pulled (Hooked ignores FallZone)
                     pullDistance = Mathf.MoveTowards(pullDistance, HoldDistance, cfg.pullSpeed * dt);
                     dir = user.AimDirection;
                     PlaceTarget(pullDistance);
@@ -142,7 +142,7 @@ namespace AnomalyArena
 
         void PlaceTarget(float distance)
         {
-            // 拉到身前时不会把目标塞到平台外面（墙里或缺口外）
+            // When pulled in front, the target is never placed outside the platform (inside a wall or beyond a gap)
             Vector3 p = ArenaShape.ClampInside(user.Position + dir * distance, target.Radius);
             p.y = target.Position.y;
             target.SetMovePosition(p);
@@ -159,7 +159,7 @@ namespace AnomalyArena
             if (phase == Phase.Hold) Throw();
         }
 
-        /// <summary>朝当前瞄准方向扔出去，本身不造成伤害；撞墙按规则扣墙伤，飞进缺口掉下去。</summary>
+        /// <summary>Throws it along the current aim direction; the throw itself deals no damage; a wall hit deals wall damage as usual, and flying into a gap means falling.</summary>
         void Throw()
         {
             var t = target;

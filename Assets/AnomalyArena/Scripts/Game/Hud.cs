@@ -5,9 +5,9 @@ using UnityEngine.InputSystem;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 英文文字界面（IMGUI，Unity 自带字体）：
-    /// 左上生命 / 波次 / 剩余敌人，底部当前武器与次数（蓄力时显示蓄力条），地上武器名字，敌人头顶血条，换装提示，
-    /// 揭晓横幅，结束画面；标题画面有 START 和白盒 / 美术版切换按钮。
+    /// English text UI (IMGUI, Unity's built-in font):
+    /// HP / wave / enemies left at the top left, current weapon and uses at the bottom (charge bar while charging), names of weapons on the ground, enemy HP bars, swap hint,
+    /// reveal banner, end screen; the title screen has START and the whitebox / illustrated toggle button.
     /// </summary>
     public class Hud : MonoBehaviour
     {
@@ -23,7 +23,7 @@ namespace AnomalyArena
             public float t, life;
         }
 
-        /// <summary>飘字：受击处冒出的伤害数字，往上飘、刚出现时放大一下再缩回。</summary>
+        /// <summary>Floating text: a damage number that pops up at the hit point, drifts upward, and briefly scales up when it appears.</summary>
         class DamageNum
         {
             public Vector3 world;
@@ -33,7 +33,7 @@ namespace AnomalyArena
             public float t;
         }
 
-        // 飘字存活秒数（真实时间，顿帧时也照常飘）
+        // Lifetime of floating text in seconds (real time, keeps drifting during hit stop)
         const float DamageNumLife = 0.8f;
 
         GUIStyle style;
@@ -48,7 +48,7 @@ namespace AnomalyArena
 
         static GameManager GM => GameManager.Instance;
 
-        /// <summary>中间的一行提示，最多同时 4 条。</summary>
+        /// <summary>A line of hint text in the middle; at most 4 at once.</summary>
         public void Toast(string text, Color c, float life = 2.2f)
         {
             msgs.Add(new Msg { text = text, color = c, life = life });
@@ -71,10 +71,10 @@ namespace AnomalyArena
 
         public void FlashDamage() => damageFlash = 1f;
 
-        /// <summary>在 world 处冒一个伤害数字；heavy 时字更大。</summary>
+        /// <summary>Pops a damage number at world; larger when heavy.</summary>
         public void DamageNumber(Vector3 world, float amount, Color c, bool heavy)
         {
-            // 同一位置附近随机错开一点，连续几下不会叠成一个
+            // Random small offset around the same spot so consecutive hits do not stack into one
             Vector2 jitter = Random.insideUnitCircle * 0.4f;
             nums.Add(new DamageNum
             {
@@ -128,7 +128,7 @@ namespace AnomalyArena
                 Box(new Rect(0, 0, Screen.width, Screen.height), new Color(1f, 0f, 0f, 0.15f * damageFlash));
         }
 
-        // ───── 场景内标签 ─────
+        // ───── In-scene labels ─────
 
         void WorldLabels()
         {
@@ -136,7 +136,7 @@ namespace AnomalyArena
             if (cam == null) return;
             foreach (var w in GM.weapons.ground)
             {
-                // 标签放在武器贴图上方（底边对齐锚点），深色底板，不压住武器
+                // The label sits above the weapon texture (bottom edge on the anchor) on a dark plate, so it does not cover the weapon
                 if (!w || !ToScreen(cam, w.LabelPoint(cam), out var sp)) continue;
                 string s = w.Revealed ? $"{w.Label} x{w.UsesLeft}" : w.Label;
                 var size = Measure(s, 15);
@@ -159,7 +159,7 @@ namespace AnomalyArena
             {
                 float k = n.t / DamageNumLife;
                 if (!ToScreen(cam, n.world + cam.transform.up * (0.6f + k * 1.6f), out var sp)) continue;
-                float pop = 1f + 0.6f * Mathf.Clamp01(1f - n.t / 0.12f); // 刚出现时大 60%，0.12 秒缩回
+                float pop = 1f + 0.6f * Mathf.Clamp01(1f - n.t / 0.12f); // 60% larger when it appears, back to normal in 0.12 s
                 var c = n.color;
                 c.a = 1f - k * k;
                 int size = Mathf.RoundToInt(n.size * pop);
@@ -175,7 +175,7 @@ namespace AnomalyArena
             return s.z > 0f;
         }
 
-        // ───── 面板 ─────
+        // ───── Panels ─────
 
         void DrawStatus()
         {
@@ -202,7 +202,7 @@ namespace AnomalyArena
             Text(new Rect(x, y + 78 * u, w, 22 * u), $"Kills {wv.Kills}    Time {GM.Elapsed:0}s", 14, TextDim,
                 TextAnchor.MiddleLeft);
 
-            // 体力条：冲刺中亮黄、耗尽后变灰直到回到可以再冲的量
+            // Stamina bar: bright yellow while sprinting, grey after running out until it recovers enough to sprint again
             var st = p.stamina;
             Text(new Rect(x, y + 102 * u, 90 * u, 20 * u), "Stamina", 13, TextDim, TextAnchor.MiddleLeft);
             var sBar = new Rect(x + 70 * u, y + 107 * u, w - 70 * u, 10 * u);
@@ -231,7 +231,7 @@ namespace AnomalyArena
             else
             {
                 Text(inner, w.Label, 20, w.Revealed ? TextWeapon : Color.white, TextAnchor.MiddleLeft);
-                // 有弹夹的武器（反向射击）同时显示弹夹余量
+                // Weapons with a clip (Reverse Shot) also show rounds left
                 string uses = w.RoundsLeft > 0
                     ? $"Uses {w.UsesLeft}/{w.MaxUses}  +{w.RoundsLeft} rounds"
                     : $"Uses {w.UsesLeft}/{w.MaxUses}";
@@ -239,7 +239,7 @@ namespace AnomalyArena
                     TextAnchor.MiddleRight);
                 if (w.Active is SwingCharge charge)
                 {
-                    // 蓄力条：满了闪烁
+                    // Charge bar: blinks when full
                     float c = charge.Charge01;
                     var bar = new Rect(line2.x, line2.y + 8 * u, line2.width * 0.55f, 12 * u);
                     Box(bar, new Color(1f, 1f, 1f, 0.12f));
@@ -260,7 +260,7 @@ namespace AnomalyArena
                 }
             }
 
-            // 已装备时站在武器上，提示右键才会换装
+            // Standing on a weapon while armed: hint that right click swaps
             if (w != null && p.NearPickup != null && GM.State == GameState.Playing)
             {
                 var hint = new Rect((Screen.width - 520 * u) * 0.5f, panel.y - 42 * u, 520 * u, 34 * u);
@@ -276,7 +276,7 @@ namespace AnomalyArena
             if (bannerT > 0f)
             {
                 float a = Mathf.Clamp01(bannerT / 0.4f);
-                // 深色横条垫底：在花哨的地面上也看得清
+                // Dark strip behind the text so it stays readable on a busy floor
                 Box(new Rect(0, y - 6 * u, Screen.width, 92 * u), new Color(0.03f, 0.04f, 0.06f, 0.6f * a));
                 Text(new Rect(0, y, Screen.width, 56 * u), bannerTitle, 40, new Color(1f, 1f, 1f, a),
                     TextAnchor.MiddleCenter);
@@ -336,7 +336,7 @@ namespace AnomalyArena
                 y += 34 * u;
             }
 
-            // 两个按钮：开局、切换白盒 / 美术版（切换会重新加载场景）
+            // Two buttons: start, and whitebox / illustrated toggle (switching reloads the scene)
             y += 36 * u;
             float bw = 260 * u, bh = 54 * u, gap = 24 * u;
             var start = new Rect(Screen.width * 0.5f - bw - gap * 0.5f, y, bw, bh);
@@ -348,7 +348,7 @@ namespace AnomalyArena
             if (Button(art, artLabel, new Color(0.25f, 0.45f, 0.8f, 0.95f), Color.white)) GM.ToggleArt();
             Text(new Rect(0, y + bh + 10 * u, Screen.width, 26 * u),
                 "Space = start      T = switch art (whitebox <-> illustrated)", 15, TextDim, TextAnchor.MiddleCenter);
-            // 右下角版本号（PlayerSettings.bundleVersion）
+            // Version number in the bottom-right corner (PlayerSettings.bundleVersion)
             Text(new Rect(0, Screen.height - 30 * u, Screen.width - 16 * u, 24 * u), $"v{Application.version}", 14,
                 TextDim, TextAnchor.MiddleRight);
         }
@@ -382,7 +382,7 @@ namespace AnomalyArena
             Box(new Rect(x - t * 0.5f, y + s * 0.4f, t, s * 0.6f), c);
         }
 
-        // ───── 绘制工具 ─────
+        // ───── Drawing helpers ─────
 
         bool Button(Rect r, string label, Color bg, Color fg)
         {

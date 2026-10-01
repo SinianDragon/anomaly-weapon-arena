@@ -28,4 +28,4 @@ MonoBehaviour:
   maxDamage: 15
   maxKnockback: 10
   maxChargeTime: 1
-  chargeMoveMultiplier: 0.4
+  chargeMoveMultiplier: 0.5

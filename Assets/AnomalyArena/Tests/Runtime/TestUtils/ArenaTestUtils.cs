@@ -4,17 +4,17 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-    // 场景内集成测试的共用准备：关掉波次、清空地上武器，只留下测试自己放的东西
+    // Shared setup for in-scene integration tests: turn off waves and clear ground weapons, leaving only what the test places itself
     internal static class ArenaTestUtils
     {
         public const string ArenaScene = "Assets/AnomalyArena/Scenes/Arena.unity";
 
-        // 测试敌人的血量：足够多，任何一击都打不死，方便用“扣没扣血”判断打没打到
+        // HP of test enemies: high enough that no single hit kills, so 'did HP drop' tells whether a hit landed
         public const float SturdyHp = 999f;
 
         public static async Awaitable<GameManager> StartSandboxAsync()
         {
-            // 等一帧让 GameManager.Start（开局放武器）先跑完，再清场
+            // Wait one frame so GameManager.Start (initial weapon spawn) runs first, then clear the field
             await Awaitable.NextFrameAsync();
             var gm = GameManager.Instance;
             gm.waves.enabled = false;
@@ -28,7 +28,7 @@ namespace AnomalyArena
             return gm;
         }
 
-        // 不会移动、不会主动攻击、血量很厚的敌人
+        // An enemy that does not move or attack and has a lot of HP
         public static Enemy CreateEnemy(Vector3 position, string name, bool large = false)
         {
             var gm = GameManager.Instance;
@@ -41,7 +41,7 @@ namespace AnomalyArena
             return enemy;
         }
 
-        // 给玩家一把指定效果的武器（揭晓前就定好效果）
+        // Gives the player a weapon with a chosen effect (decided before reveal)
         public static Weapon GiveWeapon(PlayerController player, WeaponType type, EffectId effect)
         {
             var spawner = GameManager.Instance.weapons;
@@ -54,7 +54,7 @@ namespace AnomalyArena
             return weapon;
         }
 
-        // 等到条件成立；配合测试方法上的 [Timeout] 使用，条件永远不成立时由超时让测试失败
+        // Waits until the condition holds; used with [Timeout] on the test method, which fails the test if the condition never holds
         public static async Awaitable WaitUntilAsync(Func<bool> condition)
         {
             while (!condition()) await Awaitable.NextFrameAsync();

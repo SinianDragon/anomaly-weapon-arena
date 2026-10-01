@@ -4,8 +4,8 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 白盒 / 美术版切换。开关只能在标题画面按（切换时重新加载场景），所以每个物体只需要在生成时看一眼开关，
-    /// 开着就把白盒方块藏起来、换成贴图面片。静态字段在重新加载场景后仍然保留，按 R 重开也不会丢。
+    /// Whitebox / illustrated toggle. It can only be switched on the title screen (switching reloads the scene), so each object only has to check the flag when it is created:
+    /// if on, hide the whitebox primitive and show a textured quad instead. Static fields survive scene reloads, so restarting with R keeps the choice.
     /// </summary>
     public static class Art
     {
@@ -14,7 +14,7 @@ namespace AnomalyArena
         public static ArtSet Set => GameManager.Instance ? GameManager.Instance.art : null;
         public static bool On => Enabled && Set != null;
 
-        // 排序：地面装饰 < 角色 < 手里的武器 < 飞行物
+        // Sorting: ground decoration < characters < held weapon < projectiles
         public const int OrderGround = 0, OrderCharacter = 1, OrderHeld = 2, OrderProjectile = 3;
 
         static readonly Dictionary<Texture, Material> mats = new Dictionary<Texture, Material>();
@@ -35,7 +35,7 @@ namespace AnomalyArena
         static Renderer Quad(Transform parent, Texture tex, int order)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            // 必须立即删：挂到角色（动态刚体）下面时，延迟到帧末才删的 MeshCollider 会报错并参与这一帧的碰撞
+            // Must be destroyed immediately: under a character (dynamic rigidbody), a MeshCollider destroyed at end of frame throws errors and takes part in this frame's collisions
             Object.DestroyImmediate(go.GetComponent<Collider>());
             go.name = tex.name;
             go.transform.SetParent(parent, false);
@@ -47,7 +47,7 @@ namespace AnomalyArena
             return r;
         }
 
-        /// <summary>始终正对镜头的立牌，底边在 parent 的原点（角色脚下）。返回可以整体缩放的支点。</summary>
+        /// <summary>A billboard that always faces the camera, with its bottom edge at the parent's origin (the character's feet). Returns a pivot that can be scaled as a whole.</summary>
         public static Transform Billboard(Transform parent, Texture tex, float height, int order, out Renderer sprite)
         {
             var pivot = new GameObject("ArtBillboard").transform;
@@ -61,8 +61,8 @@ namespace AnomalyArena
         }
 
         /// <summary>
-        /// 在已有立牌上再叠一层（蓄力发光、保护泡泡），和底图同心。layerTex 的像素密度和底图相同时（四周留同样的边距），
-        /// 按“层贴图高度 / 底图高度”放大后身体正好和底图重合。
+        /// Adds another layer on top of an existing billboard (wind-up glow, protection bubble), concentric with the base image. When layerTex has the same pixel density as the base (same margin on every side),
+        /// scaling by 'layer texture height / base texture height' makes the body line up exactly with the base.
         /// </summary>
         public static Renderer BillboardLayer(Transform pivot, Texture baseTex, float baseHeight, Texture layerTex,
             int order)
@@ -74,7 +74,7 @@ namespace AnomalyArena
             return r;
         }
 
-        /// <summary>平躺在地上、居中的方形贴图（出生点 X、范围圈）。size 是边长。</summary>
+        /// <summary>A centered square texture lying flat on the ground (spawn X, range ring). size is the side length.</summary>
         public static Renderer Ground(Transform parent, Texture tex, float size, int order)
         {
             var r = Quad(parent, tex, order);
@@ -83,7 +83,7 @@ namespace AnomalyArena
             return r;
         }
 
-        /// <summary>沿贴图的 U 方向重复 tiles 次（贴图导入方式要是 Repeat）。</summary>
+        /// <summary>Repeats the texture tiles times along U (the texture must be imported as Repeat).</summary>
         public static void TileU(Renderer r, float tiles)
         {
             if (!r) return;
@@ -93,7 +93,7 @@ namespace AnomalyArena
             r.SetPropertyBlock(mpb);
         }
 
-        /// <summary>平躺在地面上、贴图的右边指向 parent 的前方（武器、飞行物）。length 是沿前方的长度。</summary>
+        /// <summary>Lies flat on the ground with the right side of the texture pointing along the parent's forward (weapons, projectiles). length is the length along forward.</summary>
         public static Transform Flat(Transform parent, Texture tex, float length, int order, out Renderer sprite,
             Vector3 localPos = default)
         {
@@ -101,7 +101,7 @@ namespace AnomalyArena
             holder.SetParent(parent, false);
             holder.localPosition = localPos;
             sprite = Quad(holder, tex, order);
-            // 先绕 X 转 90° 躺平（正面朝上），再绕 Y 转 -90° 让贴图的右边指向前方
+            // Rotate 90° around X to lie flat (face up), then -90° around Y so the right side of the texture points forward
             sprite.transform.localRotation = Quaternion.Euler(0f, -90f, 0f) * Quaternion.Euler(90f, 0f, 0f);
             sprite.transform.localScale = new Vector3(length, length / Aspect(tex), 1f);
             return holder;
@@ -121,7 +121,7 @@ namespace AnomalyArena
             foreach (var r in root.GetComponentsInChildren<MeshRenderer>()) r.enabled = false;
         }
 
-        /// <summary>地板换成沙地贴图，缺口外面铺一排“沙地边缘 + 黑坑”。</summary>
+        /// <summary>Replaces the floor with the sand texture and lays a row of 'sand edge + black pit' outside each gap.</summary>
         public static void DecorateArena()
         {
             var s = Set;
@@ -132,7 +132,7 @@ namespace AnomalyArena
                 var m = new Material(GameManager.Instance.litMaterial);
                 m.SetTexture("_BaseMap", s.floor);
                 m.color = Color.white;
-                // 地板网格的 UV 就是世界坐标 xz（ArenaSetup 生成），每 floorTileSize 格铺一块贴图
+                // The floor mesh UV is world xz (built by ArenaSetup); one texture tile per floorTileSize units
                 float tile = 1f / Mathf.Max(0.5f, s.floorTileSize);
                 m.SetTextureScale("_BaseMap", new Vector2(tile, tile));
                 r.sharedMaterial = m;
@@ -141,7 +141,7 @@ namespace AnomalyArena
             var walls = GameObject.Find("Arena/Walls");
             if (walls && s.wallBrick)
             {
-                // 墙网格的 UV 也是世界坐标 xz（ArenaGeometryBuilder）：俯视镜头主要看到墙顶，砖按格平铺
+                // The wall mesh UV is also world xz (ArenaGeometryBuilder): the top-down camera mostly sees wall tops, bricks tile per unit
                 var m = new Material(GameManager.Instance.litMaterial);
                 m.SetTexture("_BaseMap", s.wallBrick);
                 m.color = Color.white;
@@ -157,7 +157,7 @@ namespace AnomalyArena
             {
                 var box = z.GetComponent<BoxCollider>();
                 Vector3 outward = z.outward;
-                // ArenaSetup：FallZone 的本地 z 朝外、本地 x 沿着边；中心在缺口中点向外 3 格处，沿边方向比缺口宽 1 格
+                // ArenaSetup: FallZone local z points outward, local x runs along the edge; its center is 3 units outside the gap midpoint and it is 1 unit wider than the gap along the edge
                 Vector3 along = z.transform.right;
                 float width = box.size.x - 1f;
                 Vector3 edge = z.transform.position - outward * 3f;
@@ -168,7 +168,7 @@ namespace AnomalyArena
                 {
                     var tile = Quad(z.transform.parent, s.gapEdge, OrderGround).transform;
                     tile.position = edge + along * (-width * 0.5f + w * (i + 0.5f)) + outward * (depth * 0.5f);
-                    // 贴图上方（沙地）朝向场内，下方（黑坑）朝外
+                    // Top of the texture (sand) faces the arena, bottom (black pit) faces outward
                     tile.rotation = Quaternion.LookRotation(Vector3.down, -outward);
                     tile.localScale = new Vector3(w, depth, 1f);
                 }
@@ -176,7 +176,7 @@ namespace AnomalyArena
         }
     }
 
-    /// <summary>立牌每帧转向镜头。</summary>
+    /// <summary>Turns a billboard toward the camera every frame.</summary>
     public class FaceCamera : MonoBehaviour
     {
         void LateUpdate()
@@ -187,8 +187,8 @@ namespace AnomalyArena
     }
 
     /// <summary>
-    /// 钩子伸出时的链刀：刀柄 + 重复平铺的链条 + 刀尖（一把刀）。链条按链节重复，伸多长链节都不变形。
-    /// 刀尖比链条粗 tipScale 倍；总长短于刀柄加刀尖时整体缩小。
+    /// Chain blade shown while the hook extends: hilt + tiled chain + tip (a knife). The chain repeats per link, so links never stretch however far it extends.
+    /// The tip is tipScale times thicker than the chain; when the total length is shorter than hilt plus tip, everything is scaled down.
     /// </summary>
     public class StretchBlade
     {

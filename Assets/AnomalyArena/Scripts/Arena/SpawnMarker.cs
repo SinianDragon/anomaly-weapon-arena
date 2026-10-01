@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    /// <summary>敌人出生预警：地上的红色 X，1 秒后在这里出生。</summary>
+    /// <summary>Enemy spawn warning: a red X on the ground; the enemy spawns here 1 second later.</summary>
     public class SpawnMarker : MonoBehaviour
     {
         public bool large;
@@ -15,11 +15,11 @@ namespace AnomalyArena
             var m = go.AddComponent<SpawnMarker>();
             m.large = large;
             m.timer = delay;
-            m.size = large ? 2.4f : 1.2f; // 大型敌人是小型的两倍
+            m.size = large ? 2.4f : 1.2f; // the large enemy's marker is twice the small one
             var xTex = Art.On ? (large ? Art.Set.spawnXLarge : Art.Set.spawnXSmall) : null;
             if (xTex)
             {
-                // 美术版：贴地的红 X 贴图（和两根方块交叉的白盒 X 一样大）
+                // Illustrated mode: a red X texture on the ground (same size as the whitebox X made of two crossed boxes)
                 Art.Ground(go.transform, xTex, m.size * 1.2f, Art.OrderGround);
                 m.MoveTo(pos);
                 return m;

@@ -32,7 +32,7 @@ namespace AnomalyArena
             Assert.That(sut.explosionFrames, Has.Length.EqualTo(3).And.All.Not.Null);
         }
 
-        // Art.BillboardLayer 按“发光图尺寸 / 原图尺寸”放大并同心放置：前提是四周边距一样宽
+        // Art.BillboardLayer scales by 'glow image size / base image size' and places it concentrically: this requires the same margin on every side
         [TestCase("enemySmall", "enemySmallWindup")]
         [TestCase("enemyLarge", "enemyLargeWindup")]
         public void WindupTexture_PaddedEquallyOnAllSides(string baseField, string windupField)
@@ -47,7 +47,7 @@ namespace AnomalyArena
             Assert.That(padX, Is.EqualTo(padY).And.GreaterThan(0));
         }
 
-        // 链条和墙砖要平铺，导入方式必须是 Repeat，否则只显示一节 / 一块
+        // The chain and wall bricks are tiled, so they must be imported as Repeat; otherwise only one link / one tile shows
         [TestCase("Assets/AnomalyArena/Art/Textures/hook_mid.png")]
         [TestCase("Assets/AnomalyArena/Art/Textures/wall_brick.png")]
         [TestCase("Assets/AnomalyArena/Art/Textures/floor_sand_muted.png")]

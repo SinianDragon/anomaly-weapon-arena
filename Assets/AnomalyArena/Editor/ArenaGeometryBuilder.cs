@@ -6,8 +6,8 @@ using UnityEngine;
 namespace AnomalyArena.EditorTools
 {
     /// <summary>
-    /// 按 ArenaShape 生成不规则平台：地板（多边形网格，带一圈侧面）、沿边外侧的墙（接缝处斜切对齐）、缺口（黑色描边 + FallZone）。
-    /// 网格存成 Scenes/ArenaGeometry.asset。菜单 5 在现有场景里只重建这一部分，其他对象和数值不动。
+    /// Builds the irregular platform from ArenaShape: floor (polygon mesh with a skirt), walls along the outside of each edge (mitered at the joints), gaps (black outline + FallZone).
+    /// The meshes are saved to Scenes/ArenaGeometry.asset. Menu 5 rebuilds only this part of an existing scene; other objects and values are untouched.
     /// </summary>
     public static class ArenaGeometryBuilder
     {
@@ -17,8 +17,8 @@ namespace AnomalyArena.EditorTools
 
         const float FloorDepth = 1f;
 
-        // FallZone 从缺口边线外 1 格开始、深 4 格：避免卡在小缺口上的大型敌人被误判。
-        // Art.DecorateArena 依赖“FallZone 中心 = 缺口中点向外 1 + 4 / 2 = 3 格”
+        // The FallZone starts 1 unit outside the gap line and is 4 units deep, so a large enemy stuck in a small gap is not counted as fallen.
+        // Art.DecorateArena relies on 'FallZone center = gap midpoint + 1 + 4 / 2 = 3 units outward'
         const float ZoneOffset = 1f, ZoneDepth = 4f;
 
         [MenuItem("Anomaly Arena/5. Rebuild Arena Geometry (irregular shape)")]
@@ -71,9 +71,9 @@ namespace AnomalyArena.EditorTools
             return root;
         }
 
-        // ───── 地板 ─────
+        // ───── Floor ─────
 
-        /// <summary>顶面（耳切法三角化，凹多边形也可以）+ 一圈向下 FloorDepth 的侧面。UV = 世界 xz，贴图按格平铺。</summary>
+        /// <summary>Top face (ear-clipping triangulation, works for concave polygons) + a skirt going down by FloorDepth. UV = world xz, so textures tile per unit.</summary>
         static Mesh FloorMesh()
         {
             var v = ArenaShape.Vertices;
@@ -92,7 +92,7 @@ namespace AnomalyArena.EditorTools
             return mesh;
         }
 
-        /// <summary>逆时针简单多边形的耳切法三角化。</summary>
+        /// <summary>Ear-clipping triangulation of a counter-clockwise simple polygon.</summary>
         static List<(int, int, int)> Triangulate(Vector2[] v)
         {
             var idx = new List<int>();
@@ -104,7 +104,7 @@ namespace AnomalyArena.EditorTools
                 for (int n = 0; n < idx.Count; n++)
                 {
                     int a = idx[(n + idx.Count - 1) % idx.Count], b = idx[n], c = idx[(n + 1) % idx.Count];
-                    if (Cross(v[b] - v[a], v[c] - v[b]) <= 0f) continue; // 凹角不能当耳朵
+                    if (Cross(v[b] - v[a], v[c] - v[b]) <= 0f) continue; // a reflex corner cannot be an ear
                     bool contains = false;
                     foreach (int o in idx)
                     {
@@ -130,9 +130,9 @@ namespace AnomalyArena.EditorTools
         static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c) =>
             Cross(b - a, p - a) >= 0f && Cross(c - b, p - b) >= 0f && Cross(a - c, p - c) >= 0f;
 
-        // ───── 墙 ─────
+        // ───── Walls ─────
 
-        /// <summary>第 e 条边上去掉缺口后剩下的实心段（边上的距离区间）。</summary>
+        /// <summary>Solid segments left on edge e after removing gaps (distance ranges along the edge).</summary>
         static List<(float, float)> SolidRanges(int e)
         {
             var cuts = new List<(float, float)>();
@@ -153,8 +153,8 @@ namespace AnomalyArena.EditorTools
         }
 
         /// <summary>
-        /// 一段墙：内侧贴着边，外侧向外 WallThick。落在顶点上的一端用斜切（两条相邻边外移后的交点），
-        /// 相邻两段墙在拐角处严丝合缝；缺口那一端直接垂直切断。
+        /// One wall segment: inner side on the edge, outer side WallThick outward. An end that sits on a vertex is mitered (intersection of the two adjacent edges after offsetting),
+        /// so adjacent segments meet cleanly at corners; an end at a gap is cut square.
         /// </summary>
         static Mesh WallMesh(int e, float from, float to)
         {
@@ -166,17 +166,17 @@ namespace AnomalyArena.EditorTools
             return Prism(new[] { innerA, innerB, outerB, outerA }, WallHeight);
         }
 
-        /// <summary>顶点 i 处墙外侧的斜切点：前一条边和后一条边各自外移 WallThick 后的交点。</summary>
+        /// <summary>Miter point on the outer side of the wall at vertex i: intersection of the previous and next edges, each offset outward by WallThick.</summary>
         static Vector2 MiterPoint(int i)
         {
             int prev = (i + ArenaShape.EdgeCount - 1) % ArenaShape.EdgeCount;
             Vector2 n1 = ArenaShape.EdgeOutward(prev), n2 = ArenaShape.EdgeOutward(i);
             Vector2 m = (n1 + n2).normalized;
-            float cos = Mathf.Max(0.3f, Vector2.Dot(m, n2)); // 防止极尖的角把斜切点推得太远
+            float cos = Mathf.Max(0.3f, Vector2.Dot(m, n2)); // keeps very sharp corners from pushing the miter point too far out
             return ArenaShape.Vertices[i] + m * (WallThick / cos);
         }
 
-        /// <summary>把平面上的凸四边形拉成高 h 的柱体（每个面单独顶点，平直着色）。</summary>
+        /// <summary>Extrudes a convex quad on the plane into a prism of height h (separate vertices per face, flat shading).</summary>
         static Mesh Prism(Vector2[] quad, float h)
         {
             var b = new MeshBuilder();
@@ -202,7 +202,7 @@ namespace AnomalyArena.EditorTools
             return b.ToMesh();
         }
 
-        // ───── 缺口 ─────
+        // ───── Gaps ─────
 
         static void BuildGap(ArenaShape.Gap g, Transform parent, Material edgeMat)
         {
@@ -214,7 +214,7 @@ namespace AnomalyArena.EditorTools
             var gt = new GameObject(g.name).transform;
             gt.SetParent(parent, false);
 
-            // 缺口边缘描黑：一条贴着边线的黑条，提示“这里会掉下去”
+            // Black outline along the gap: a black strip on the edge line that says 'you fall here'
             var strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
             strip.name = "EdgeOutline";
             Object.DestroyImmediate(strip.GetComponent<Collider>());
@@ -225,7 +225,7 @@ namespace AnomalyArena.EditorTools
             strip.GetComponent<Renderer>().sharedMaterial = edgeMat;
             strip.isStatic = true;
 
-            // 缺口外的 FallZone：本地 z 朝外、本地 x 沿着边
+            // FallZone outside the gap: local z points outward, local x runs along the edge
             var zone = new GameObject("FallZone");
             zone.transform.SetParent(gt, false);
             zone.transform.position = mid + n * (ZoneOffset + ZoneDepth * 0.5f) + Vector3.down * 4f;
@@ -247,9 +247,9 @@ namespace AnomalyArena.EditorTools
         }
 
         /// <summary>
-        /// 逐面拼网格：给出期望朝向，自动调整三角形顺序让正面朝那边。
-        /// UV 按世界坐标、每格 1：朝上的面用 xz（地板、墙顶）；竖直的面用“沿着这个面的水平距离, 高度”，
-        /// 否则竖直面上 xz 几乎不变，贴图会被拉成一条条竖纹。
+        /// Builds a mesh face by face: given the desired facing, the triangle winding is adjusted so the front faces that way.
+        /// UVs are in world units, 1 per unit: upward faces use xz (floor, wall tops); vertical faces use 'horizontal distance along the face, height',
+        /// otherwise xz barely changes on a vertical face and the texture stretches into vertical stripes.
         /// </summary>
         sealed class MeshBuilder
         {

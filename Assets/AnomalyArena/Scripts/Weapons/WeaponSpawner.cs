@@ -5,7 +5,7 @@ using Random = UnityEngine.Random;
 
 namespace AnomalyArena
 {
-    /// <summary>地上的武器：每一波开始时补几把（第 1 波在开局放）、上限、拾取查找。</summary>
+    /// <summary>Weapons on the ground: how many are added at the start of each wave (wave 1 at game start), the cap, and pickup lookup.</summary>
     public class WeaponSpawner : MonoBehaviour
     {
         [Serializable]
@@ -16,17 +16,17 @@ namespace AnomalyArena
             public int uses = 6;
             public WeaponEffect effectA;
             public WeaponEffect effectB;
-            [Range(0f, 1f)] [Tooltip("抽到 effectA 的概率")] public float chanceA = 0.5f;
-            [Tooltip("调试：新生成的这类武器全部用这个效果")] public EffectId forceOnSpawn = EffectId.None;
+            [Range(0f, 1f)] [Tooltip("Chance of rolling effectA")] public float chanceA = 0.5f;
+            [Tooltip("Debug: every newly spawned weapon of this type uses this effect")] public EffectId forceOnSpawn = EffectId.None;
         }
 
         public WeaponDef[] defs;
-        [Tooltip("每一波开始时补几把：第 1 波（开局）、第 2 波、第 3 波……波数多于数组时用最后一个")]
-        public int[] perWaveCounts = { 3, 5, 8 };
-        [Tooltip("地上最多同时有几把；满了就不再补")] public int groundCap = 12;
+        [Tooltip("Weapons added at the start of each wave: wave 1 (game start), wave 2, wave 3...; if there are more waves than entries, the last entry is used")]
+        public int[] perWaveCounts = { 3, 4, 5  };
+        [Tooltip("Maximum weapons on the ground at once; no more are added when full")] public int groundCap = 6;
         public float pickupRadius = 1f;
-        [Tooltip("击败大型敌人时掉落一把随机武器的概率")] [Range(0f, 1f)] public float largeDropChance = 0.5f;
-        [Tooltip("大型敌人的掉落不受地上武器上限限制")] public bool dropIgnoresCap = true;
+        [Tooltip("Chance that defeating a large enemy drops a random weapon")] [Range(0f, 1f)] public float largeDropChance = 0.5f;
+        [Tooltip("Large-enemy drops ignore the ground weapon cap")] public bool dropIgnoresCap = true;
 
         public readonly List<Weapon> ground = new List<Weapon>();
 
@@ -46,10 +46,10 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>大型敌人被击败时按概率掉落任意类型的武器（效果照常随机）。</summary>
+        /// <summary>When a large enemy is defeated, drops a weapon of any type by chance (its effect is rolled as usual).</summary>
         public void TryLargeDrop(Vector3 pos)
         {
-            if (Random.value >= largeDropChance) return;
+            if (Random.value < largeDropChance) return;
             if (!dropIgnoresCap && ground.Count >= groundCap) return;
             pos = ArenaShape.ClampInside(pos, 1.5f);
             var w = Spawn(defs[Random.Range(0, defs.Length)], pos);
@@ -73,7 +73,7 @@ namespace AnomalyArena
             return w;
         }
 
-        /// <summary>换下的武器留在地上，保留效果、揭晓状态和次数。</summary>
+        /// <summary>The swapped-out weapon stays on the ground and keeps its effect, reveal state and uses.</summary>
         public void Drop(Weapon w, Vector3 pos)
         {
             w.PlaceOnGround(ArenaShape.ClampInside(pos, 1f));

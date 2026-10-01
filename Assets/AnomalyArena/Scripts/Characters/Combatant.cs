@@ -4,7 +4,7 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 玩家与敌人的共同实现：生命、受伤与保护、刚体冲量击飞、撞墙扣血、掉进缺口、状态机、持有武器。
+    /// Shared implementation for the player and enemies: HP, damage and protection, rigidbody-impulse knockback, wall damage, falling into gaps, state machine, holding a weapon.
     /// </summary>
     [RequireComponent(typeof(Rigidbody), typeof(CapsuleCollider))]
     public abstract class Combatant : MonoBehaviour, IWeaponHolder, IDamageDealer
@@ -13,8 +13,8 @@ namespace AnomalyArena
         public float maxHp = 10f;
         public float moveSpeed = 6f;
         public float radius = 0.5f;
-        [Tooltip("被撞飞距离的倍率（大型敌人 0.5）")] public float knockbackScale = 1f;
-        [Tooltip("挨打后的保护时间，期间攻击伤害无效（撞墙伤害不受影响）")] public float protectionTime = 0f;
+        [Tooltip("Multiplier on knockback distance (0.5 for large enemies)")] public float knockbackScale = 1f;
+        [Tooltip("Protection time after being hit; attack damage is ignored during it (wall damage is not)")] public float protectionTime = 0f;
 
         [Header("Refs")]
         public Renderer bodyRenderer;
@@ -30,7 +30,7 @@ namespace AnomalyArena
 
         protected Rigidbody rb;
         protected Vector3 knockVel;
-        /// <summary>叠加在正常移动上的推力（连发后坐力），按撞飞同样的系数衰减。</summary>
+        /// <summary>Push added on top of normal movement (burst-fire recoil), decaying with the same factor as knockback.</summary>
         Vector3 pushVel;
         protected float weaponCooldown;
         KnockKind knockKind;
@@ -48,10 +48,10 @@ namespace AnomalyArena
         public IWeaponHolder Owner => this;
         public abstract Team Team { get; }
         public abstract Vector3 AimDirection { get; }
-        /// <summary>这具尸体被飞刀带回时撞人的伤害（= 生前的攻击伤害）。</summary>
+        /// <summary>Damage this corpse deals when carried back by the throwing knife (= its attack damage when alive).</summary>
         public virtual float CorpseDamage => 0f;
 
-        /// <summary>正被这个角色用钩子黏住、可以当掩体的敌人。</summary>
+        /// <summary>The enemy this character is holding with the hook and can use as cover.</summary>
         public Combatant HeldShield => Weapon != null && Weapon.Active is Hook h ? h.HeldTarget : null;
         public bool MovementLocked => Weapon != null && Weapon.Active != null && Weapon.Active.LocksMovement;
         public float SpeedMultiplier => Weapon != null && Weapon.Active != null ? Weapon.Active.SpeedMultiplier : 1f;
@@ -69,22 +69,22 @@ namespace AnomalyArena
             Hp = maxHp;
         }
 
-        // ───── 美术版 ─────
+        // ───── Illustrated mode ─────
 
-        /// <summary>美术版的立牌（白盒版为空）。</summary>
+        /// <summary>Billboard in illustrated mode (null in whitebox mode).</summary>
         protected Transform artPivot;
         protected Renderer artSprite;
         protected virtual Texture2D ArtTexture => null;
-        /// <summary>蓄力时换上的发光版立牌（没有就退回染色）。</summary>
+        /// <summary>Glowing billboard shown during wind-up (falls back to tinting if missing).</summary>
         protected virtual Texture2D ArtWindupTexture => null;
         protected virtual float ArtHeight => 2f;
 
-        /// <summary>美术版蓄力发光层；为空时蓄力表现用染色代替。</summary>
+        /// <summary>Wind-up glow layer in illustrated mode; when null, wind-up is shown by tinting.</summary>
         protected Renderer artWindupSprite;
-        // 受伤保护期间罩在身上的泡泡（白盒是半透明球，美术版是泡泡贴图）
+        // Bubble around the body during post-hit protection (translucent sphere in whitebox, bubble texture in illustrated mode)
         GameObject shieldVisual;
 
-        /// <summary>头顶的位置（血条放这里）：美术版是立牌顶，沿镜头上方算。</summary>
+        /// <summary>Position above the head (where the HP bar goes): in illustrated mode this is the top of the billboard along the camera's up.</summary>
         public Vector3 HeadPoint(Camera cam)
         {
             if (artPivot && cam) return artPivot.position + cam.transform.up * (ArtHeight + 0.15f);
@@ -109,7 +109,7 @@ namespace AnomalyArena
             if (protectionTime > 0f) BuildShieldVisual();
         }
 
-        /// <summary>蓄力发光：有发光版立牌就换上它，否则返回 false 让调用方用染色表现。</summary>
+        /// <summary>Wind-up glow: switch to the glowing billboard if there is one; otherwise return false so the caller tints instead.</summary>
         protected bool ShowArtWindup(bool on)
         {
             if (!artWindupSprite) return false;
@@ -122,7 +122,7 @@ namespace AnomalyArena
         {
             if (artPivot && Art.Set.shieldBubble)
             {
-                // 泡泡比立牌大一圈，和立牌同心
+                // The bubble is slightly larger than the billboard and concentric with it
                 var bubble = Art.Set.shieldBubble;
                 var r = Art.BillboardLayer(artPivot, bubble, ArtHeight * 1.15f, bubble, Art.OrderHeld);
                 r.transform.localPosition = new Vector3(0f, ArtHeight * 0.5f, -0.02f);
@@ -131,7 +131,7 @@ namespace AnomalyArena
             else
             {
                 shieldVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                UnityEngine.Object.DestroyImmediate(shieldVisual.GetComponent<Collider>()); // 挂在动态刚体下，必须立即删
+                UnityEngine.Object.DestroyImmediate(shieldVisual.GetComponent<Collider>()); // under a dynamic rigidbody, must be destroyed immediately
                 shieldVisual.name = "Shield";
                 shieldVisual.transform.SetParent(transform, false);
                 shieldVisual.transform.localPosition = new Vector3(0f, radius * 1.6f, 0f);
@@ -143,11 +143,11 @@ namespace AnomalyArena
             shieldVisual.SetActive(false);
         }
 
-        // ───── 受击反馈 ─────
+        // ───── Hit feedback ─────
 
-        // 压扁回弹的时长（秒，真实时间）
+        // Duration of the squash-and-recover (seconds, real time)
         const float SquashTime = 0.15f;
-        // 美术版闪白：Unlit 是“贴图 × 颜色”，颜色调到远大于 1 才会饱和成接近纯白（黑描边保持黑）
+        // White flash in illustrated mode: Unlit is 'texture × color', so the color has to go far above 1 to saturate to near white (black outlines stay black)
         static readonly Color ArtFlashColor = new Color(6f, 6f, 6f, 1f);
         static MaterialPropertyBlock flashBlock;
 
@@ -167,8 +167,8 @@ namespace AnomalyArena
         };
 
         /// <summary>
-        /// 受击反馈：闪白、压扁回弹、朝受击方向飞溅的碎片、冲击环、伤害飘字；
-        /// 玩家挨打、重击、撞墙、爆炸再加顿帧和震屏。所有扣血路径（攻击、撞墙、被人形导弹撞死）都走这里。
+        /// Hit feedback: white flash, squash and recover, shards flying in the hit direction, shock ring, floating damage number;
+        /// the player being hit, heavy hits, wall impacts and explosions also add hit stop and screen shake. Every damage path (attack, wall, killed by the human missile) goes through here.
         /// </summary>
         void PlayHitFeedback(float amount, Vector3 dir, HitKind kind)
         {
@@ -181,7 +181,7 @@ namespace AnomalyArena
             Vector3 at = Query.AtCastHeight(Position);
             Color c = HitColor(kind);
             float size = Mathf.Max(0.12f, radius * 0.3f);
-            // 子弹、穿透：窄而快的一束；钝击：宽扇形；撞击、爆炸：全向
+            // Bullet, pierce: a narrow fast jet; blunt: a wide fan; slam, blast: all directions
             var (count, speed, spread) = kind switch
             {
                 HitKind.Bullet => (9, 12f, 50f),
@@ -197,7 +197,7 @@ namespace AnomalyArena
             else
                 Fx.Pop(at, c, radius * (heavy ? 3.5f : 2.5f));
             if (heavy) Fx.Ring(Position, radius + 2.5f, c);
-            // 撞墙、被尸体砸到：脚下扬起一团尘土
+            // Wall impact or hit by a corpse: a puff of dust at the feet
             if (kind == HitKind.Slam && art && art.dust)
                 Fx.SpriteBillboard(art.dust, new Vector3(Position.x, 0.1f, Position.z), radius * 1.5f, radius * 3.5f, 0.45f);
 
@@ -209,7 +209,7 @@ namespace AnomalyArena
             }
             else
             {
-                // 子弹是连发的：每发都顿帧会让射击一卡一卡的，所以子弹命中敌人不顿帧、不震屏
+                // Bullets come in bursts: hit stop on every shot would make firing stutter, so bullet hits on enemies skip hit stop and shake
                 if (kind != HitKind.Bullet)
                 {
                     GM.HitStop(heavy ? fb.heavyHitStop : fb.hitStop);
@@ -218,14 +218,14 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>闪白和压扁只改外观，放在 LateUpdate：所有移动、状态都算完之后再覆盖缩放和颜色。</summary>
+        /// <summary>Flash and squash only change appearance, so they run in LateUpdate: scale and color are overridden after all movement and state are done.</summary>
         void LateUpdate()
         {
-            // 用真实时间：顿帧期间闪白和压扁照样播放，正好是“定格一下”的效果
+            // Uses real time: flash and squash keep playing during hit stop, which gives the 'freeze frame' look
             float dt = Time.unscaledDeltaTime;
             if (shieldVisual)
             {
-                // 保护快结束的最后 0.15 秒闪烁，提示“马上又会挨打了”
+                // Blinks during the last 0.15 s of protection to signal 'you can be hit again soon'
                 bool show = Protected && IsAlive && (protectTimer > 0.15f || Mathf.Repeat(Time.time * 20f, 1f) < 0.5f);
                 if (shieldVisual.activeSelf != show) shieldVisual.SetActive(show);
             }
@@ -238,7 +238,7 @@ namespace AnomalyArena
             {
                 squashTimer = Mathf.Max(0f, squashTimer - dt);
                 float s = GM.feedback.squash * (squashTimer / SquashTime);
-                // 立牌：横向变宽、纵向变矮；白盒胶囊：水平两轴变宽、高度变矮
+                // Billboard: wider horizontally, shorter vertically; whitebox capsule: wider on both horizontal axes, shorter in height
                 squashTarget.localScale = artPivot
                     ? Vector3.Scale(squashBase, new Vector3(1f + s, 1f - s, 1f))
                     : Vector3.Scale(squashBase, new Vector3(1f + s, 1f - s, 1f + s));
@@ -256,7 +256,7 @@ namespace AnomalyArena
             }
             else if (bodyRenderer)
             {
-                // 白盒用 PropertyBlock 盖掉颜色：不改共享材质，敌人蓄力时换的黄色材质也不受影响
+                // Whitebox overrides color with a PropertyBlock: the shared material is untouched, and the yellow wind-up material of enemies is unaffected
                 if (on)
                 {
                     flashBlock ??= new MaterialPropertyBlock();
@@ -267,14 +267,14 @@ namespace AnomalyArena
             }
         }
 
-        // ───── 状态机 ─────
+        // ───── State machine ─────
 
         public void SetState(CharacterState s)
         {
             if (State == s || State == CharacterState.Dead) return;
             var old = State;
 
-            // 退出旧状态
+            // Exit the old state
             if (old == CharacterState.Hooked || old == CharacterState.Dashing)
             {
                 rb.isKinematic = false;
@@ -283,7 +283,7 @@ namespace AnomalyArena
 
             State = s;
 
-            // 进入新状态
+            // Enter the new state
             switch (s)
             {
                 case CharacterState.Normal:
@@ -315,7 +315,7 @@ namespace AnomalyArena
             if (protectTimer > 0f) protectTimer -= dt;
             if (weaponCooldown > 0f) weaponCooldown -= dt;
 
-            // 兜底：掉出平台很远却没碰到 FallZone
+            // Fallback: far off the platform without having touched a FallZone
             if (IsAlive && State != CharacterState.Hooked && State != CharacterState.Dashing && rb.position.y < -2f)
                 OnEnterFallZone(Vector3.zero);
 
@@ -349,7 +349,7 @@ namespace AnomalyArena
 
         protected abstract void TickNormal(float dt);
 
-        // ───── 撞飞与撞墙 ─────
+        // ───── Knockback and wall hits ─────
 
         /// <inheritdoc/>
         public void Push(Vector3 dir, float distance)
@@ -357,7 +357,7 @@ namespace AnomalyArena
             if (!IsAlive) return;
             dir = Query.Flat(dir);
             if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
-            // 同撞飞：初速度 = 距离 × 阻尼系数，指数衰减后正好推 distance；连发时逐发叠加
+            // Same as knockback: initial speed = distance × damping, exponential decay pushes exactly distance; stacks shot by shot in a burst
             pushVel += dir.normalized * (distance * GM.rules.knockDamping);
         }
 
@@ -365,7 +365,7 @@ namespace AnomalyArena
         public void SlamIntoWall(Vector3 at, Vector3 away, float bounceDistance)
         {
             if (!IsAlive) return;
-            // 冲刺中刚体是运动学的，MovePosition 要到下一步物理才生效，切回动态后会丢；这里直接设位置
+            // The rigidbody is kinematic while dashing; MovePosition only applies on the next physics step and is lost after switching back to dynamic, so set the position directly
             rb.position = at;
             transform.position = at;
             if (State == CharacterState.Dashing || State == CharacterState.Hooked) SetState(CharacterState.Normal);
@@ -373,7 +373,7 @@ namespace AnomalyArena
             if (IsAlive) Knockback(away, bounceDistance, KnockKind.Push);
         }
 
-        /// <summary>刚体冲量撞飞。距离 d 对应初速度 d × 阻尼系数，指数衰减后正好滑行 d。</summary>
+        /// <summary>Knockback by rigidbody impulse. Distance d maps to initial speed d × damping; exponential decay makes it slide exactly d.</summary>
         public void Knockback(Vector3 dir, float distance, KnockKind kind)
         {
             if (!IsAlive || State == CharacterState.Hooked || State == CharacterState.Dashing) return;
@@ -391,7 +391,7 @@ namespace AnomalyArena
         void OnCollisionEnter(Collision c) => CheckWallHit(c);
         void OnCollisionStay(Collision c) => CheckWallHit(c);
 
-        /// <summary>撞飞途中碰到墙：停下；撞击速度超过阈值才扣墙伤，每次撞击只扣一次。</summary>
+        /// <summary>Hitting a wall during knockback: stop; wall damage only applies above the speed threshold, once per impact.</summary>
         void CheckWallHit(Collision c)
         {
             if (State != CharacterState.Knocked && State != CharacterState.Thrown) return;
@@ -409,7 +409,7 @@ namespace AnomalyArena
             }
         }
 
-        /// <param name="away">背离墙的方向：碎片朝这边溅</param>
+        /// <param name="away">Direction away from the wall: shards fly this way</param>
         void TakeWallDamage(Vector3 away)
         {
             if (!IsAlive) return;
@@ -419,7 +419,7 @@ namespace AnomalyArena
             if (Hp <= 0f) Die(DeathCause.HpDepleted);
         }
 
-        // ───── 受伤与死亡 ─────
+        // ───── Damage and death ─────
 
         public virtual bool ReceiveDamage(DamageInfo info)
         {
@@ -441,7 +441,7 @@ namespace AnomalyArena
 
         public void Heal(float amount) => Hp = Mathf.Min(maxHp, Hp + amount);
 
-        /// <summary>直接死亡（被人形导弹撞到，大型也算）。按剩余血量播一次穿透受击特效。</summary>
+        /// <summary>Instant death (hit by the human missile; large enemies too). Plays one pierce hit effect scaled by remaining HP.</summary>
         public void Kill()
         {
             if (!IsAlive) return;
@@ -460,7 +460,7 @@ namespace AnomalyArena
             ReportEliminated();
         }
 
-        /// <summary>FallZone 触发：被钩住时不会掉；其余情况立即判定掉进缺口。</summary>
+        /// <summary>FallZone trigger: no fall while hooked; otherwise counts as falling into the gap immediately.</summary>
         public void OnEnterFallZone(Vector3 outward)
         {
             if (!IsAlive || State == CharacterState.Hooked) return;
@@ -486,7 +486,7 @@ namespace AnomalyArena
 
         public void SetMovePosition(Vector3 p) => rb.MovePosition(p);
 
-        // ───── 武器 ─────
+        // ───── Weapon ─────
 
         public void Equip(Weapon w)
         {
@@ -494,7 +494,7 @@ namespace AnomalyArena
             w.AttachTo(this, hand ? hand : transform);
         }
 
-        /// <summary>松开左键：交给进行中的流程（蓄力挥砍在这时挥出）。</summary>
+        /// <summary>Left button released: forwarded to the running routine (Charge Swing swings now).</summary>
         public void ReleaseWeapon()
         {
             if (Weapon != null && Weapon.Active != null) Weapon.Active.OnUseReleased();
@@ -508,8 +508,8 @@ namespace AnomalyArena
         }
 
         /// <summary>
-        /// 按左键：流程进行中（钩子黏住）交给流程处理；上一把飞刀还没回来时不能用；
-        /// 否则发动一次效果。弹夹里还有子弹就先打弹夹，打空了才扣一次次数并装满弹夹（roundsPerUse）。
+        /// Left button pressed: if a routine is running (hook holding) it handles the press; cannot be used while the previous thrown knife is still out;
+        /// otherwise fires the effect once. If the clip still has rounds they are used first; when empty, one use is spent and the clip is refilled (roundsPerUse).
         /// </summary>
         public bool TryUseWeapon()
         {
@@ -543,7 +543,7 @@ namespace AnomalyArena
 
         public void OnWeaponRuntimeFinished() => CheckWeaponDepleted();
 
-        /// <summary>次数和弹夹都用完、没有进行中的流程、飞刀也回来了时，武器消失。</summary>
+        /// <summary>The weapon disappears once uses and clip are both empty, no routine is running and the thrown knife has returned.</summary>
         public void CheckWeaponDepleted()
         {
             if (Weapon == null || Weapon.UsesLeft > 0 || Weapon.RoundsLeft > 0 || Weapon.Active != null || Weapon.InFlight) return;

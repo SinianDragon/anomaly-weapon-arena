@@ -3,8 +3,8 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 追踪导弹：先朝随机方向直飞；lockDelay 秒后按权重随机锁定场上任意目标（玩家权重 3，敌人各 1），
-    /// 以有限转向速度追过去；目标没了就重新抽。路上碰到任何人或墙就爆炸；到寿命原地爆炸。爆炸伤到范围内所有人。
+    /// Homing missile: first flies straight in a random direction; after lockDelay seconds it locks onto a weighted-random target on the field (player weight 3, each enemy 1)
+    /// and chases it at a limited turn rate; if the target is gone it picks again. It explodes on touching any character or wall, and in place at the end of its lifetime. The blast hits everyone in range.
     /// </summary>
     public class HomingMissile : Projectile
     {
@@ -23,7 +23,7 @@ namespace AnomalyArena
             dir = Query.Flat(direction).normalized;
             if (Art.On && Art.Set.missile)
             {
-                // 美术版：导弹贴图 + 尾焰（尾焰贴图的头部贴着导弹尾部，火舌朝后）
+                // Illustrated mode: missile texture + exhaust flame (the head of the flame texture touches the missile's tail, flames pointing back)
                 Art.Flat(transform, Art.Set.missile, 1.6f, Art.OrderProjectile, out body);
                 if (Art.Set.flame)
                     flame = Art.Flat(transform, Art.Set.flame, 1.3f, Art.OrderProjectile, out _,
@@ -71,7 +71,7 @@ namespace AnomalyArena
             foreach (var c in Query.Characters(pos, 0.4f))
             {
                 if (!c.IsAlive) continue;
-                if ((IWeaponHolder)c == Owner && !locked) continue; // 刚发射时不炸自己
+                if ((IWeaponHolder)c == Owner && !locked) continue; // does not blow up on its owner right after launch
                 Explode();
                 return;
             }
@@ -85,7 +85,7 @@ namespace AnomalyArena
             UpdateTransform();
         }
 
-        /// <summary>按权重在所有活着的角色里随机抽一个目标。</summary>
+        /// <summary>Picks a weighted-random target among all living characters.</summary>
         void PickTarget()
         {
             var gm = GameManager.Instance;
@@ -125,7 +125,7 @@ namespace AnomalyArena
             var art = Art.On ? Art.Set : null;
             if (art && art.explosionFrames != null && art.explosionFrames.Length > 0)
             {
-                // 美术版：火球动画 + 扩散到真实爆炸半径的地面圆圈，看得出这一炸会不会波及自己
+                // Illustrated mode: fireball animation + a ground ring expanding to the real blast radius, so you can see whether the blast reaches you
                 Fx.Flipbook(art.explosionFrames, pos + Vector3.up * 0.5f, cfg.explosionRadius * 1.5f, 0.35f);
                 if (art.explosionRing) Fx.SpriteRing(art.explosionRing, pos, cfg.explosionRadius, 0.45f);
             }

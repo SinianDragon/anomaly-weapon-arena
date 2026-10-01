@@ -3,14 +3,14 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// 枪 · 蓄力挥砍：按住左键蓄力（移动变慢，地上显示逐渐变大的扇形），松开挥出。
-    /// 蓄得越久范围越大、伤害和撞飞越强；轻点也能挥，但只有基础范围。
-    /// 没有反噬；利用方式是把敌人撞进缺口或撞墙。蓄力中被撞飞会打断，这一次照样扣次。
+    /// Gun · Charge Swing: hold the left button to charge (movement slows, a growing sector is shown on the ground), release to swing.
+    /// The longer the charge, the larger the range and the stronger the damage and knockback; a tap also swings, with the base range only.
+    /// No backfire; the way to exploit it is knocking enemies into gaps or walls. Being knocked back while charging interrupts it, and the use is still spent.
     /// </summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/Effects/Gun Swing")]
     public class GunSwingEffect : WeaponEffect
     {
-        [Header("Tap (no charge)")] [Tooltip("从使用者中心算")]
+        [Header("Tap (no charge)")] [Tooltip("Measured from the user's center")]
         public float minRadius = 2.5f;
 
         public float minArc = 90f;
@@ -22,17 +22,17 @@ namespace AnomalyArena
         public float maxDamage = 15f;
         public float maxKnockback = 10f;
 
-        [Header("Charging")] [Tooltip("蓄满需要的秒数")]
+        [Header("Charging")] [Tooltip("Seconds to reach full charge")]
         public float maxChargeTime = 1f;
 
-        [Tooltip("蓄力时的移动速度倍率")] public float chargeMoveMultiplier = 0.4f;
+        [Tooltip("Movement speed multiplier while charging")] public float chargeMoveMultiplier = 0.4f;
 
         public override void Use(Weapon weapon, IWeaponHolder user)
         {
             new GameObject("SwingCharge").AddComponent<SwingCharge>().Begin(this, weapon, user);
         }
 
-        /// <summary>按蓄力比例 k（0–1）挥出。</summary>
+        /// <summary>Swings at charge ratio k (0–1).</summary>
         public void Swing(IWeaponHolder user, float k)
         {
             float radius = Mathf.Lerp(minRadius, maxRadius, k);
@@ -42,7 +42,7 @@ namespace AnomalyArena
             Vector3 origin = user.Position;
             Vector3 aim = user.AimDirection;
             Fx.Sector(origin, aim, radius, arc, new Color(1f, 0.4f, 0.1f, Mathf.Lerp(0.6f, 0.9f, k)));
-            // 范围伤害：扇形里的人全部打到（和空手出拳只打最近一个不同）
+            // Area damage: everyone in the sector is hit (unlike the unarmed punch, which hits only the nearest)
             foreach (var c in Query.InSector(user, origin, aim, radius, arc))
             {
                 Vector3 to = Query.Flat(c.Position - origin);

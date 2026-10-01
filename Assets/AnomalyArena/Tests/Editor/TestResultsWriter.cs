@@ -7,10 +7,10 @@ using UnityEngine;
 namespace AnomalyArena.EditorTools
 {
     /// <summary>
-    /// 在编辑器里跑测试（Test Runner 窗口或脚本调用 TestRunnerApi）时，把结果写到项目的 Logs/ 下：
-    /// TestResults.xml（NUnit 格式）和 TestResults.txt（一行一个测试的摘要）。
-    /// Unity 只在命令行运行时才写结果文件；这里补上，方便脚本和 AI 工具读取。
-    /// 跑 Play Mode 测试会重载程序域，回调会丢，所以用 InitializeOnLoad 在每次加载时重新注册。
+    /// When tests run in the editor (Test Runner window, or a script calling TestRunnerApi), writes the results under the project's Logs/ folder:
+    /// TestResults.xml (NUnit format) and TestResults.txt (a one-line summary per test).
+    /// Unity only writes a result file for command-line runs; this fills that gap so scripts and tools can read the results.
+    /// Running Play Mode tests reloads the domain and callbacks are lost, so InitializeOnLoad re-registers on every load.
     /// </summary>
     [InitializeOnLoad]
     internal static class TestResultsWriter
@@ -24,7 +24,7 @@ namespace AnomalyArena.EditorTools
             ScriptableObject.CreateInstance<TestRunnerApi>().RegisterCallbacks(new Callbacks());
         }
 
-        /// <summary>跑 AnomalyArena.Tests（Play Mode）。结果写到 Logs/TestResults.*。</summary>
+        /// <summary>Runs AnomalyArena.Tests (Play Mode). Results are written to Logs/TestResults.*.</summary>
         [MenuItem("Anomaly Arena/4. Run Play Mode Tests")]
         public static void RunPlayModeTests()
         {

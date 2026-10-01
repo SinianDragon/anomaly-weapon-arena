@@ -1,245 +1,246 @@
-# 反常武器竞技场 · 1.0（白盒 + 美术版，对应规格 v0.6，之后的改动见下方各版本）
+# Anomaly Weapon Arena · 1.0 (whitebox + illustrated mode; based on spec v0.6, later changes are listed per version below)
 
-引擎：Unity **6000.5.10f1** + URP，目标平台 WebGL。（规格写的是 6000.3.6f1，这台电脑只装了 6000.5，按讨论先沿用。v0.7 的改动是在 6000.6.3f1 上做和验证的。）
+Engine: Unity **6000.5.10f1** + URP, target platform WebGL. (The spec says 6000.3.6f1; this machine only had 6000.5 installed, so that was used as agreed. The v0.7 changes were made and verified on 6000.6.3f1.)
 
-## 一键生成
+## One-click build
 
-菜单 **Anomaly Arena → 1. Build Whitebox Scene**：生成图层（Wall / Character）、材质、效果数值资源、美术素材表、预制体、场景，并写好构建设置。
-重新运行会覆盖场景和预制体；`Effects/` 里已经调过的数值资源**不会被覆盖**。
+Menu **Anomaly Arena → 1. Build Whitebox Scene**: creates the layers (Wall / Character), materials, effect value assets, the art set, prefabs and the scene, and writes the build settings.
+Running it again overwrites the scene and prefabs; value assets in `Effects/` that have already been tuned are **not overwritten**.
 
-菜单 **Anomaly Arena → 2. Build WebGL**：输出到项目根目录 `Builds/WebGL/`。
+Menu **Anomaly Arena → 2. Build WebGL**: outputs to `Builds/WebGL/` in the project root.
 
-菜单 **Anomaly Arena → 3. Update Existing Scene**：不重建场景，只刷新效果的英文名字 / 说明、生成 `Art/ArtSet.asset` 并挂到 GameManager、把敌人预制体改成贴身挥拳的数值、大型敌人缩成小型的两倍、武器补给改成每波 3 / 5 / 8 把（上限 12）。
+Menu **Anomaly Arena → 3. Update Existing Scene**: does not rebuild the scene; it only refreshes the English names / descriptions of the effects, generates `Art/ArtSet.asset` and assigns it to the GameManager, switches the enemy prefabs to the close-range punch values, shrinks the large enemy to twice the small one, and sets weapon supply to 3 / 5 / 8 per wave (cap 12).
 
-## 目录
+## Folders
 
-| 路径 | 内容 |
+| Path | Contents |
 |---|---|
-| `Scenes/Arena.unity` | 唯一场景：30 × 30 平台、墙、4 个缺口与 FallZone、各系统对象、玩家 |
-| `Prefabs/` | Player、EnemySmall、EnemyLarge、Gun、Knife、Missile |
-| `Effects/*.asset` | 六种效果的数值（ScriptableObject），**在 Inspector 里直接调** |
-| `Scripts/Core/Interfaces.cs` | `IWeaponHolder`（能拿武器的人）、`IDamageDealer`、`IDamageReceiver`、状态枚举 |
-| `Scripts/Characters/Combatant.cs` | 玩家和敌人的共同实现：状态机、刚体冲量撞飞、撞墙扣血、FallZone、保护、持有武器 |
-| `Scripts/Characters/PlayerController.cs` / `Enemy.cs` | 玩家输入；敌人追击、蓄力（变黄）、攻击、掩体规则 |
-| `Scripts/Arena/FallZone.cs` | 缺口外的触发器，碰到就判定掉下去 |
-| `Scripts/Weapons/Weapon.cs` | 武器实例：类型、效果、揭晓、次数、调试强制效果 |
-| `Scripts/Weapons/WeaponEffect.cs` | 效果基类、持续流程基类 `WeaponRuntime`、飞行物基类 `Projectile` |
-| `Scripts/Weapons/Effects/` | 六个效果脚本，每种一个文件 |
-| `Scripts/Weapons/Runtime/` | 子弹、飞刀、导弹、钩子、冲刺的运行逻辑 |
-| `Scripts/Weapons/WeaponSpawner.cs` | 开局 3 把、每波后补 2 把、上限 5、效果概率、强制效果 |
-| `Scripts/Game/` | GameManager（胜负、R 重开、统一清理、白盒 / 美术切换）、WaveManager（波次、上限、红 X）、Hud（英文界面）、最低限度的反馈 |
-| `Scripts/Art/` | `ArtSet`（美术版贴图表）、`Art`（立牌 / 平放贴图 / 地板和缺口装饰 / 钩子拉伸刀身） |
-| `Art/Textures/` | 美术版贴图（从两张素材图切出来的 PNG）；`Art/ArtSet.asset` 把它们挂到一起 |
+| `Scenes/Arena.unity` | The only scene: 30 × 30 platform, walls, 4 gaps with FallZones, the system objects, the player |
+| `Prefabs/` | Player, EnemySmall, EnemyLarge, Gun, Knife, Missile |
+| `Effects/*.asset` | Values of the six effects (ScriptableObject), **tuned directly in the Inspector** |
+| `Scripts/Core/Interfaces.cs` | `IWeaponHolder` (anything that can hold a weapon), `IDamageDealer`, `IDamageReceiver`, state enums |
+| `Scripts/Characters/Combatant.cs` | Shared implementation for the player and enemies: state machine, rigidbody-impulse knockback, wall damage, FallZone, protection, holding a weapon |
+| `Scripts/Characters/PlayerController.cs` / `Enemy.cs` | Player input; enemy chase, wind-up (turns yellow), attack, cover rule |
+| `Scripts/Arena/FallZone.cs` | Trigger outside each gap; touching it counts as falling |
+| `Scripts/Weapons/Weapon.cs` | Weapon instance: type, effect, reveal, uses, debug forced effect |
+| `Scripts/Weapons/WeaponEffect.cs` | Effect base class, base class for ongoing routines `WeaponRuntime`, projectile base class `Projectile` |
+| `Scripts/Weapons/Effects/` | The six effect scripts, one file each |
+| `Scripts/Weapons/Runtime/` | Runtime logic for the bullet, throwing knife, missile, hook and dash |
+| `Scripts/Weapons/WeaponSpawner.cs` | 3 weapons at start, 2 more after each wave, cap 5, effect chances, forced effect |
+| `Scripts/Game/` | GameManager (win / lose, restart with R, unified cleanup, whitebox / illustrated switch), WaveManager (waves, cap, red X), Hud (English UI), minimal feedback |
+| `Scripts/Art/` | `ArtSet` (texture table for illustrated mode), `Art` (billboards / flat textures / floor and gap decoration / stretching hook blade) |
+| `Art/Textures/` | Illustrated-mode textures (PNGs cut from two source images); `Art/ArtSet.asset` ties them together |
 
-## 状态机
+## State machine
 
-`CharacterState`：Normal / Knocked（被撞飞）/ Thrown（被扔出去）/ Hooked（被钩住）/ Dashing（冲刺中）/ Falling / Dead。
-进入 / 退出写在 `Combatant.SetState`；钩子自己的阶段写在 `Hook.cs` 顶部注释里。
+`CharacterState`: Normal / Knocked (knocked back) / Thrown (thrown by the hook) / Hooked / Dashing / Falling / Dead.
+Enter / exit logic is in `Combatant.SetState`; the hook's own phases are described in the comment at the top of `Hook.cs`.
 
-## 调数值、逐个测试
+## Tuning values and testing one thing at a time
 
-- 角色数值：选中 `Prefabs/` 里的预制体改 Inspector。
-- 效果数值：选中 `Effects/` 里的资源。
-- 规则（墙伤 5、撞墙速度阈值、撞飞衰减）：场景里的 GameManager。
-- 波次、同屏上限、波间回血：WaveManager。
-- 武器次数、效果概率：WeaponSpawner 的 `defs`。
-- **强制效果**：运行时选中地上某把武器，把 `Debug Force Effect` 改掉（揭晓前生效）；或者在 WeaponSpawner 的 `Force On Spawn` 里让新生成的同类武器都用这个效果。
-- 自动化测试用：`PlayerController.DebugSetAim(dir)` 锁定瞄准方向（运行时默认不开）。
+- Character values: select the prefab in `Prefabs/` and edit it in the Inspector.
+- Effect values: select the asset in `Effects/`.
+- Rules (wall damage 5, wall-hit speed threshold, knockback damping): the GameManager in the scene.
+- Waves, max alive, healing between waves: WaveManager.
+- Weapon uses and effect chances: `defs` on the WeaponSpawner.
+- **Forced effect**: at runtime, select a weapon on the ground and change `Debug Force Effect` (works before reveal); or set `Force On Spawn` on the WeaponSpawner so every newly spawned weapon of that type uses the effect.
+- For automated tests: `PlayerController.DebugSetAim(dir)` locks the aim direction (off by default at runtime).
 
-## v0.6 之后的改动
+## Changes after v0.6
 
-- **导弹 · 追踪**：随机方向射出，1 秒后按权重随机锁定场上任意目标（玩家权重 3，每个敌人 1，在 `MissileHoming.asset` 里调）；目标没了就重新抽。
-- **空手出拳**：左键出拳，伤害 3，击退 3 格（PlayerController 的 Punch 参数）。
-- **大型敌人掉落**：被击败（打死或掉进缺口）时 50% 掉一把随机武器，不受地上 5 把的上限限制（WeaponSpawner）。
-- **切波**：每波开始前玩家血量回满（WaveManager 的 `Refill Hp Each Wave`）；飞行中的子弹 / 飞刀 / 导弹、钩子、冲刺都不清掉，玩家照常移动。
-## v0.7 改动（试玩反馈）
+- **Missile · Homing**: launched in a random direction; after 1 second it locks onto a weighted-random target on the field (player weight 3, each enemy 1, tuned in `MissileHoming.asset`); if the target is gone it picks again.
+- **Unarmed punch**: left click to punch, damage 3, knockback 3 units (Punch parameters on PlayerController).
+- **Large-enemy drops**: when defeated (killed or knocked into a gap) there is a 50% chance to drop a random weapon, ignoring the cap of 5 weapons on the ground (WeaponSpawner).
+- **Wave change**: the player's HP is refilled before each wave (`Refill Hp Each Wave` on WaveManager); bullets / knives / missiles in flight, hooks and dashes are not cleared, and the player keeps moving.
 
-### 1. 敌人：贴身才挥拳，可以躲
+## v0.7 changes (playtest feedback)
 
-- **以前**：离玩家身体边缘 1.5 格（大型 2 格）就停下蓄力，蓄完只看距离就扣血，玩家很难躲，太容易掉血。
-- **现在**：一直走到几乎贴上（边缘距离 ≤ `triggerRange`：小型 0.3、大型 0.4）才开始蓄力挥拳。蓄力时身体闪黄，**朝向锁定**，原地不动。
-- 蓄完朝锁定方向挥出一个扇形（`attackArc` 120°，判定距离 `attackRange`：小型 0.8、大型 1.0，从身体边缘算），地上闪一下红色扇形。玩家此时已经走出扇形就打空。
-- 蓄力时间 `windupTime`：小型 0.5 秒、大型 0.8 秒。玩家移速 6，看到闪黄后 0.2 秒反应，剩下 0.3 秒能走 1.8 格，足够走出判定。
-- 掩体规则不变：被钩住的敌人挡在拳头扇形里时先打它。
-- 数值都在 `Prefabs/EnemySmall`、`EnemyLarge` 的 Enemy 组件上调。
+### 1. Enemies: punch only at close range, and the punch can be dodged
 
-### 2. 枪 · 挥砍 → 蓄力挥砍
+- **Before**: an enemy stopped and wound up at 1.5 units from the player's body edge (2 for large) and dealt damage by distance alone when the wind-up ended. It was very hard to dodge and too easy to lose HP.
+- **Now**: it keeps walking until it almost touches the player (edge distance ≤ `triggerRange`: 0.3 small, 0.4 large) before winding up. During the wind-up the body flashes yellow, **facing is locked**, and it stands still.
+- After the wind-up it swings an arc along the locked direction (`attackArc` 120°, hit distance `attackRange`: 0.8 small, 1.0 large, from the body edge), and a red sector flashes on the ground. If the player has already left the arc, it misses.
+- Wind-up time `windupTime`: 0.5 s small, 0.8 s large. The player moves at 6; with a 0.2 s reaction after seeing yellow, the remaining 0.3 s covers 1.8 units, enough to leave the hit area.
+- The cover rule is unchanged: a hooked enemy inside the punch arc is hit first.
+- All values are on the Enemy component of `Prefabs/EnemySmall` and `EnemyLarge`.
 
-- **以前**：和空手出拳一样是点一下出扇形，只是略大，手感上分不开。
-- **现在**：**按住左键蓄力，松开挥出**。
-  - 蓄力时移动速度 × 0.4（`chargeMoveMultiplier`），地上显示橙红色扇形预览，随蓄力变大，蓄满后闪烁；底部面板显示蓄力条。
-  - 轻点：半径 2.5、90°、伤害 6、撞飞 5。
-  - 蓄满（1 秒）：半径 5、150°、伤害 15、撞飞 10。中间按蓄力比例线性插值。
-  - 蓄力中被撞飞 / 被钩住 / 死亡会打断，不挥；这一次照样扣次数（按下时扣）。
-- 数值在 `Effects/GunSwing.asset`。
-- 和空手出拳的区别：出拳是瞬发的白色小扇形（1.2 格、伤害 3），蓄力挥砍是橙红色、范围可以到出拳的 3 倍以上。
+### 2. Gun · Swing → Charge Swing
 
-### 3. 刀 · 飞刀：看起来要像“扔出去”
+- **Before**: a click produced a sector, like the unarmed punch but slightly larger, and the two felt the same.
+- **Now**: **hold the left button to charge, release to swing**.
+  - While charging, movement speed × 0.4 (`chargeMoveMultiplier`); an orange-red sector preview on the ground grows with the charge and blinks when full; the bottom panel shows a charge bar.
+  - Tap: radius 2.5, 90°, damage 6, knockback 5.
+  - Full charge (1 s): radius 5, 150°, damage 15, knockback 10. In between it is interpolated linearly by charge ratio.
+  - Being knocked back / hooked / killed while charging interrupts it with no swing; the use is still spent (it is spent on press).
+- Values are in `Effects/GunSwing.asset`.
+- Difference from the unarmed punch: the punch is an instant small white sector (1.2 units, damage 3); the Charge Swing is orange-red and can reach more than 3 times the punch range.
 
-- 试玩时的问题：飞刀和钩子都是 50% 概率，但白盒的飞刀是一个扁方块拖着 0.35 秒的长拖尾，飞出去再飞回来，看起来和钩子的“刀身伸长再缩回”几乎一样，所以感觉刀只有一种功能。
-- 现在飞刀在空中**高速旋转**（返回时反转），拖尾缩短到 0.08 秒；美术版里是一把旋转的刀贴图。钩子仍然是从手里伸长的刀身。
-- 效果逻辑本身没改。已在编辑器里强制出两种效果各测一次（见下方“v0.7 已验证”）。
+### 3. Knife · Throwing Knife: it has to look thrown
 
-### 4. 全英文界面
+- Playtest problem: the throwing knife and the hook are both 50%, but in whitebox the knife was a flat box with a long 0.35 s trail that flew out and back, and it looked almost the same as the hook's 'blade extends and retracts', so the knife seemed to have only one function.
+- Now the knife **spins fast** in the air (reversed on the way back) and the trail is shortened to 0.08 s; in illustrated mode it is a spinning knife texture. The hook is still a blade extending from the hand.
+- The effect logic itself is unchanged. Both effects were forced and tested once each in the editor (see 'v0.7 verified' below).
 
-- 所有游戏内文字（标题、HUD、提示、武器名和效果说明、结束画面）改成英文，用 Unity 自带字体 `LegacyRuntime.ttf`，删除了思源黑体子集（`Fonts/`）。这也回到了规格“只用 Unity 自带字体”的要求。
-- 武器名：Gun / Knife / Missile；效果名：Charge Swing、Reverse Shot、Throwing Knife、Hook、Homing、Launch Yourself。
+### 4. English UI
 
-### 5. 白盒 / 美术版切换
+- All in-game text (title, HUD, hints, weapon names and effect descriptions, end screen) is in English, using Unity's built-in font `LegacyRuntime.ttf`; the Source Han Sans subset (`Fonts/`) was removed. This also goes back to the spec's 'only Unity's built-in font' requirement.
+- Weapon names: Gun / Knife / Missile; effect names: Charge Swing, Reverse Shot, Throwing Knife, Hook, Homing, Launch Yourself.
 
-- 标题画面有两个按钮：**START** 和 **ART: WHITEBOX / ART: ILLUSTRATED**（键盘：空格开始、T 切换）。**不按就是白盒**；按了切到美术版。
-- 切换时重新加载场景，所有物体按新模式生成；开关是静态变量，按 R 重开后保留。只能在标题画面切换，游戏中不能切。
-- 美术版的替换关系：
+### 5. Whitebox / illustrated switch
 
-| 白盒 | 美术版 |
+- The title screen has two buttons: **START** and **ART: WHITEBOX / ART: ILLUSTRATED** (keyboard: Space to start, T to switch). **Whitebox unless switched.**
+- Switching reloads the scene and every object is created in the new mode; the flag is a static variable and is kept after restarting with R. It can only be switched on the title screen, not during play.
+- What illustrated mode replaces:
+
+| Whitebox | Illustrated |
 |---|---|
-| 玩家蓝色胶囊 | 蓝色小团立牌 |
-| 小型 / 大型敌人红色胶囊 | 红色小怪 / 大红怪立牌；蓄力时闪黄 |
-| 地上的枪 / 刀 / 导弹方块 | 步枪 / 刀 / RPG 立牌；拿在手里时平放、指向瞄准方向 |
-| 钩子伸出的细长方块 | 刀柄 + 可拉长的中段 + 刀尖（按素材里的长剑拼） |
-| 飞刀方块 | 旋转的刀 |
-| 追踪导弹圆柱 | 导弹 + 尾焰 |
-| 发射自己的橙色残影 | 玩家身后的导弹尾焰 |
-| 带回的尸体胶囊 | 敌人贴图躺平、变灰 |
-| 灰色地板 | 沙地贴图平铺（每块 3 格） |
-| 缺口边缘黑线 | 缺口外铺一排“沙地边缘 + 黑坑” |
+| Blue player capsule | Blue blob billboard |
+| Red small / large enemy capsules | Red small monster / big red monster billboards; flash yellow during wind-up |
+| Gun / knife / missile boxes on the ground | Rifle / knife / RPG billboards; lying flat and pointing along the aim direction when held |
+| Thin box extending from the hook | Hilt + stretchable middle + tip (assembled from the longsword in the source art) |
+| Throwing knife box | Spinning knife |
+| Homing missile cylinder | Missile + exhaust flame |
+| Orange afterimage of Launch Yourself | Missile flame behind the player |
+| Carried corpse capsule | Enemy texture laid flat and greyed |
+| Grey floor | Tiled sand texture (3 units per tile) |
+| Black line on gap edges | A row of 'sand edge + black pit' outside each gap |
 
-- 墙、子弹、爆炸、出生红 X、扇形提示在美术版里仍用白盒表现（素材里没有对应的图）。
-- 贴图全部是正对镜头的立牌或平放面片，用 FxTransparent（URP Unlit 透明）材质；尺寸在 `Art/ArtSet.asset` 里调。
-- 素材里重复的图（第二个大红怪、第二 / 三个导弹、第二把刀）没有使用。
+- Walls, bullets, explosions, the red spawn X and sector hints still use the whitebox look in illustrated mode (the source art has no matching images).
+- All textures are camera-facing billboards or flat quads using the FxTransparent material (URP Unlit transparent); sizes are tuned in `Art/ArtSet.asset`.
+- Duplicate images in the source art (second big red monster, second / third missile, second knife) are not used.
 
-## 已验证
+## Verified
 
-规格第 13 节 1–11 条都在编辑器里用脚本逐条跑过，结果与规格一致。第 12 条需要在浏览器里打开发布链接确认。
+Items 1–11 of spec section 13 were each run by script in the editor and matched the spec. Item 12 needs to be confirmed by opening the published link in a browser.
 
-## v0.7.1 改动（第二轮试玩反馈）
+## v0.7.1 changes (second round of playtest feedback)
 
-1. **近战只打一个人**：空手出拳和枪 · 蓄力挥砍都只打扇形里**离得最近的一个**（`Query.MeleeTarget`）；扇形只决定够不够得到。敌人的拳本来就只打玩家（或挡在前面的掩体）。
-2. **美术版可读性**：地板换成去饱和、降对比、压暗的沙地（`Art/Textures/floor_sand_muted.png`），每块 5 格；地上武器的名字标签移到贴图上方、深色底板；敌人血条放在立牌顶上；波次横幅、提示文字加深色底。缺口边缘保留鲜黄色，正好提示危险。
-3. **尺寸**（`Art/ArtSet.asset`）：玩家立牌高 1.4、小型 1.5、大型 3；地上武器宽 3、手里 2.2——武器比角色显眼。
-4. **大型敌人 = 小型的两倍**：半径 1.5 → 1、高 3 → 4（小型半径 0.5、高 2），出生红 X 3 → 2.4。是否大型改由 Enemy 的 `large` 勾选决定，不再按半径判断。
-5. **武器补给**：每一波开始时补给，第 1 波（开局）3 把、第 2 波 5 把、第 3 波 8 把（WeaponSpawner 的 `perWaveCounts`）；地上上限 5 → 12，否则第 3 波放不下。大型敌人 50% 掉落不变。
+1. **Melee hits one target**: the unarmed punch and Gun · Charge Swing both hit only the **nearest character** in the sector (`Query.MeleeTarget`); the sector only decides reach. Enemy punches already hit only the player (or the cover in front).
+2. **Readability of illustrated mode**: the floor is now a desaturated, low-contrast, darkened sand (`Art/Textures/floor_sand_muted.png`), 5 units per tile; ground weapon labels moved above the texture on a dark plate; enemy HP bars sit on top of the billboard; the wave banner and hint text have dark backing. Gap edges keep their bright yellow, which works as a danger cue.
+3. **Sizes** (`Art/ArtSet.asset`): player billboard height 1.4, small 1.5, large 3; ground weapon width 3, held 2.2, so weapons stand out more than characters.
+4. **Large enemy = twice the small one**: radius 1.5 → 1, height 3 → 4 (small: radius 0.5, height 2), red spawn X 3 → 2.4. Whether an enemy is large is now decided by the `large` checkbox on Enemy, not by radius.
+5. **Weapon supply**: added at the start of each wave: 3 for wave 1 (game start), 5 for wave 2, 8 for wave 3 (`perWaveCounts` on WeaponSpawner); ground cap 5 → 12, otherwise wave 3 does not fit. The 50% large-enemy drop is unchanged.
 
-## v0.7.2 改动：受击反馈
+## v0.7.2 changes: hit feedback
 
-以前挨打只有一个小的半透明球闪一下，几乎看不到。现在所有扣血路径（攻击、撞墙、被人形导弹撞死）都走 `Combatant.PlayHitFeedback`：
+Being hit used to show only a small translucent sphere flash that was barely visible. Now every damage path (attack, wall, killed by the human missile) goes through `Combatant.PlayHitFeedback`:
 
-| 层 | 表现 |
+| Layer | What happens |
 |---|---|
-| 闪白 | 0.1 秒变成纯白（白盒改颜色，美术版把贴图颜色推到饱和） |
-| 压扁回弹 | 0.15 秒内从“横向 +35%、纵向 −35%”回到原样 |
-| 碎片 | 一把小方块朝受击方向飞溅，先快后慢、边飞边缩小 |
-| 爆光 / 冲击环 | 受击点亮一下；重击时地上扩散一圈冲击环 |
-| 伤害飘字 | “-5” 往上飘并淡出，刚出现时放大；重击和玩家挨打用大字，玩家挨打是红字 |
-| 顿帧 | 普通 0.035 秒、重击 0.08 秒（时间缩放 0.05），调用时立即生效 |
-| 震屏 | 玩家挨打 0.5 格、重击敌人 0.25 格 |
+| White flash | Turns pure white for 0.1 s (whitebox changes color; illustrated mode pushes the texture color to saturation) |
+| Squash and recover | Returns from '+35% horizontal, −35% vertical' to normal within 0.15 s |
+| Shards | A handful of small cubes fly in the hit direction, fast then slow, shrinking as they go |
+| Flash / shock ring | The hit point lights up; heavy hits spread a shock ring on the ground |
+| Damage number | '-5' floats up and fades, scaled up when it appears; heavy hits and hits on the player use large text, red for the player |
+| Hit stop | 0.035 s normal, 0.08 s heavy (time scale 0.05), applied immediately on call |
+| Screen shake | 0.5 units when the player is hit, 0.25 units for a heavy hit on an enemy |
 
-按伤害类型（`HitKind`）区分：
+By damage type (`HitKind`):
 
-| 类型 | 来源 | 碎片 |
+| Type | Source | Shards |
 |---|---|---|
-| Blunt 钝击 | 拳头、挥砍、敌人挥拳 | 暖黄，120° 扇形 |
-| Bullet 子弹 | 反向射击 | 亮黄，窄而快 |
-| Pierce 穿透 | 飞刀、人形导弹撞到 | 青白，最窄最快 |
-| Slam 撞击 | 撞墙、被带回的尸体砸到 | 灰白，全向，算重击 |
-| Blast 爆炸 | 导弹爆炸 | 橙色，全向，算重击 |
+| Blunt | Punch, swing, enemy punch | Warm yellow, 120° fan |
+| Bullet | Reverse Shot | Bright yellow, narrow and fast |
+| Pierce | Throwing knife, hit by the human missile | Cyan-white, narrowest and fastest |
+| Slam | Wall impact, hit by a carried corpse | Grey-white, all directions, counts as heavy |
+| Blast | Missile explosion | Orange, all directions, counts as heavy |
 
-伤害 ≥ 10 也算重击。所有手感数值在场景里 GameManager 的 **Feedback** 里调。
+Damage ≥ 10 also counts as heavy. All feel values are under **Feedback** on the GameManager in the scene.
 
-## v1.0：美术版素材全部接入
+## v1.0: all illustrated-mode assets wired in
 
-版本号 1.0.0（`ArenaSetup.Version` → PlayerSettings.bundleVersion，标题画面右下角显示）。
+Version 1.0.0 (`ArenaSetup.Version` → PlayerSettings.bundleVersion, shown in the bottom-right corner of the title screen).
 
-| 位置 | 美术版表现 | 素材 |
+| Where | Illustrated look | Asset |
 |---|---|---|
-| 敌人蓄力 | 换上带黄色光晕的发光版并一闪一闪（原来是染黄） | `enemy_small_windup` / `enemy_large_windup`：由原图加光晕生成，四周边距相同，放大后和原图同心重合 |
-| 敌人挥拳 | 拳头前方闪一道弧光 | `enemy_punch_arc` |
-| 所有受击 | 命中星光（原来是半透明球）；撞墙 / 被尸体砸到时脚下扬尘 | `hit_spark`、`dust` |
-| 受伤后 0.5 秒保护 | 身上罩一个泡泡，最后 0.15 秒闪烁（白盒是半透明蓝球） | `shield_bubble` |
-| 追踪导弹爆炸 | 3 帧火球动画 + 扩散到真实 3 格半径的地面圈 | `explosion_0..2`、`explosion_ring` |
-| 发射自己 | 身后更大的火箭火焰 | `rocket_flame` |
-| 反向射击 | 带拖尾的子弹 | `bullet` |
-| 飞刀带回的尸体 | 趴着、背上插着刀 | `corpse_small` / `corpse_large` |
-| 刀 · 钩子 | 链刀：刀柄 + 按链节重复平铺的链条 + 一把刀（伸多长链节都不变形） | `hook_hilt`、`hook_mid`（Repeat）、`hook_tip` |
-| 出生预警 | 红 X 贴图（大型是小型的两倍） | `spawn_x_small` / `spawn_x_large` |
-| 墙 | 砖墙；墙顶按 xz、侧面按“沿墙距离 × 高度”铺砖 | `wall_brick`（Repeat） |
-| 冲刺 | 脚下尘土 | `dust` |
+| Enemy wind-up | Switches to a glowing version with a yellow halo and blinks (used to be a yellow tint) | `enemy_small_windup` / `enemy_large_windup`: made from the base image plus a halo, same margin on every side, so it stays concentric with the base when scaled |
+| Enemy punch | An arc flash in front of the fist | `enemy_punch_arc` |
+| All hits | Hit spark (used to be a translucent sphere); dust at the feet on wall impact / corpse hit | `hit_spark`, `dust` |
+| 0.5 s protection after a hit | A bubble around the body, blinking for the last 0.15 s (translucent blue sphere in whitebox) | `shield_bubble` |
+| Homing missile explosion | 3-frame fireball animation + a ground ring expanding to the real 3-unit radius | `explosion_0..2`, `explosion_ring` |
+| Launch Yourself | A larger rocket flame behind the player | `rocket_flame` |
+| Reverse Shot | Bullet with a trail | `bullet` |
+| Corpse carried by the throwing knife | Face down with the knife in its back | `corpse_small` / `corpse_large` |
+| Knife · Hook | Chain blade: hilt + chain tiled per link + a knife (links never stretch however far it extends) | `hook_hilt`, `hook_mid` (Repeat), `hook_tip` |
+| Spawn warning | Red X texture (large is twice the small one) | `spawn_x_small` / `spawn_x_large` |
+| Walls | Brick wall; tops tiled by xz, sides by 'distance along the wall × height' | `wall_brick` (Repeat) |
+| Sprint | Dust at the feet | `dust` |
 
-- 每一项在 `ArtSet` 里留空时，那一处自动退回白盒表现。
-- 新增 Edit Mode 测试 `ArtSetTest`（7 个）：所有贴图都已挂上、爆炸 3 帧、发光图四周边距相同（对齐的前提）、需要平铺的贴图导入为 Repeat。
-- 测试合计 **31 个**（Play Mode 24 + Edit Mode 7），全部通过。
-- 小怪的蓄力发光没有用 Gemini 的图（画风是 3D 光泽风，和其他素材对不上），改为由原图生成；大怪也用同一种做法，保证两者一致、对齐准确。
+- When an entry in `ArtSet` is left empty, that element automatically falls back to its whitebox look.
+- New Edit Mode test `ArtSetTest` (7 tests): every texture is assigned, the explosion has 3 frames, the glow images have the same margin on every side (required for alignment), and textures that need tiling are imported as Repeat.
+- **31 tests** in total (Play Mode 24 + Edit Mode 7), all passing.
+- The small monster's wind-up glow does not use the Gemini image (its glossy 3D style did not match the other art); it is generated from the base image instead, and the big monster is done the same way so the two are consistent and aligned.
 
-## v0.8 改动：武器手感、冲刺、不规则场地、自动化测试
+## v0.8 changes: weapon feel, sprint, irregular arena, automated tests
 
-### 武器与移动
+### Weapons and movement
 
-| 项目 | 现在 |
+| Item | Now |
 |---|---|
-| 枪 · 蓄力挥砍 | 改回**范围伤害**：扇形里的人全部打到（`Query.InSector`）。空手出拳仍然只打最近的一个 |
-| 枪 · 反向射击 | **按住左键连发**（冷却 0.12 秒）；一次次数 = 5 发弹夹，6 次共 30 发；每发后坐力推 0.8 格、逐发叠加，走 `Push` 叠加在移动上，不进入被撞飞状态；子弹命中不顿帧、不震屏 |
-| 刀 · 飞刀 | 打中一个人后弹向 7 格内最近的、中间不隔墙的下一个人，**最多 4 个**，然后飞回；**飞回之前不能再扔**（`Weapon.InFlight`）。打死的第一个敌人被带着一起飞回 |
-| 导弹 · 发射自己 | **撞墙就停下**，扣一次墙伤（5），被弹回 3 格（`SlamIntoWall`），不再反射后继续飞 |
-| 冲刺 | 按住 **Shift** 移动：速度 ×2；满体力冲 1 秒，不冲时 3 秒回满；耗尽后回到 25% 才能再冲（`Stamina`，玩家预制体上调）。左上角有体力条 |
+| Gun · Charge Swing | Back to **area damage**: everyone in the sector is hit (`Query.InSector`). The unarmed punch still hits only the nearest |
+| Gun · Reverse Shot | **Hold the left button to keep firing** (cooldown 0.12 s); one use = a 5-round clip, 30 rounds over 6 uses; each shot's recoil pushes 0.8 units and stacks, applied through `Push` on top of movement without entering the knocked state; bullet hits have no hit stop or screen shake |
+| Knife · Throwing Knife | After hitting a character it bounces to the nearest next character within 7 units with no wall in between, **up to 4**, then flies back; **it cannot be thrown again until it returns** (`Weapon.InFlight`). The first enemy killed is carried back with it |
+| Missile · Launch Yourself | **Stops at a wall**, takes wall damage once (5) and is bounced back 3 units (`SlamIntoWall`); it no longer reflects and keeps flying |
+| Sprint | Hold **Shift** while moving: speed ×2; full stamina gives 1 second of sprint and refills in 3 seconds when not sprinting; after running out it must recover to 25% before sprinting again (`Stamina`, tuned on the player prefab). A stamina bar is shown at the top left |
 
-### 场地：不规则多边形
+### Arena: irregular polygon
 
-- 形状数据集中在 `Scripts/Arena/ArenaShape.cs`：13 条边，有斜切的角和两处向内凹的边，外接范围和原来的 30 × 30 差不多，镜头没动。
-- 缺口 5 个：北、南、**东（新增）** 3 个大缺口宽 7 格；东、西 2 个小缺口宽 **1.6 格**（原来 2.5）。小缺口比玩家和小型敌人（直径 1）宽、比大型敌人（直径 2）窄，大型会卡住。
-- 游戏逻辑里原来按正方形算的地方全部改用 `ArenaShape`：敌人不走下边缘（贴着边滑）、武器随机位置、敌人出生点、钩子拉人的限位、武器掉落位置。
-- 场景里的地板、墙、缺口由 `Editor/ArenaGeometryBuilder.cs` 生成：地板是多边形网格（UV = 世界坐标，贴图按格平铺）；墙沿边建在外侧，拐角处斜切拼接；网格存在 `Scenes/ArenaGeometry.asset`。改了 `ArenaShape` 之后跑菜单 **5. Rebuild Arena Geometry** 只重建场地，其他对象不动。
+- The shape data is in `Scripts/Arena/ArenaShape.cs`: 13 edges, with chamfered corners and two edges that bend inward. The bounding area is about the same as the original 30 × 30, so the camera did not move.
+- 5 gaps: 3 large gaps of 7 units on the north, south and **east (new)**; 2 small gaps of **1.6 units** on the east and west (was 2.5). The small gaps are wider than the player and small enemies (diameter 1) and narrower than large enemies (diameter 2), so large ones get stuck.
+- Everything in the game logic that assumed a square now uses `ArenaShape`: enemies do not walk off the edge (they slide along it), random weapon positions, enemy spawn points, the hook's pull limit, weapon drop positions.
+- The floor, walls and gaps in the scene are generated by `Editor/ArenaGeometryBuilder.cs`: the floor is a polygon mesh (UV = world coordinates, textures tile per unit); walls are built along the outside of the edges and mitered at the corners; meshes are stored in `Scenes/ArenaGeometry.asset`. After changing `ArenaShape`, run menu **5. Rebuild Arena Geometry** to rebuild only the arena and leave other objects alone.
 
-### 工程化
+### Engineering
 
-- 代码拆成程序集：`AnomalyArena`（`Scripts/`）、`AnomalyArena.Editor`（`Editor/`）、`AnomalyArena.Tests`（`Tests/Runtime/`，Play Mode 测试）、`AnomalyArena.Editor.Tests`（`Tests/Editor/`）。
-- 测试框架：Unity Test Framework + [TestHelper](https://github.com/nowsprinting/test-helper) 1.6.4（OpenUPM，`manifest.json` 里的 scopedRegistries）。
-- **24 个自动化测试**，全部通过：体力（5）、飞刀弹射和“回来前不能再扔”（3）、蓄力挥砍范围（2）、出拳单体 / 扇形判定（2）、人形导弹撞墙（1）、反向射击弹夹和不打断操作（2）、每波补给数量（3）、场地形状（6，含“小缺口比小怪宽、比大怪窄”）。
-- 运行：Test Runner 窗口，或菜单 **4. Run Play Mode Tests**；结果写到 `Logs/TestResults.xml` 和 `Logs/TestResults.txt`。
+- Code is split into assemblies: `AnomalyArena` (`Scripts/`), `AnomalyArena.Editor` (`Editor/`), `AnomalyArena.Tests` (`Tests/Runtime/`, Play Mode tests), `AnomalyArena.Editor.Tests` (`Tests/Editor/`).
+- Test framework: Unity Test Framework + [TestHelper](https://github.com/nowsprinting/test-helper) 1.6.4 (OpenUPM, via scopedRegistries in `manifest.json`).
+- **24 automated tests**, all passing: stamina (5), knife ricochet and 'cannot throw again before it returns' (3), Charge Swing range (2), punch single-target / sector check (2), human missile wall hit (1), Reverse Shot clip and not interrupting input (2), per-wave supply counts (3), arena shape (6, including 'small gap wider than a small enemy, narrower than a large one').
+- Running: the Test Runner window, or menu **4. Run Play Mode Tests**; results are written to `Logs/TestResults.xml` and `Logs/TestResults.txt`.
 
-### v0.7.1 / v0.7.2 已验证（编辑器里用脚本驱动 Play 模式）
+### v0.7.1 / v0.7.2 verified (Play mode driven by script in the editor)
 
-| 项目 | 结果 |
+| Item | Result |
 |---|---|
-| 补给数量 | 第 1 / 2 / 3 波 = 3 / 5 / 8，上限 12，开局地上 3 把 |
-| 出拳，两个敌人都在拳头范围内 | 只选中近的那个 |
-| 蓄满挥砍，扇形里 3 格和 4 格各一个敌人 | 3 格的死亡，4 格的 HP 10/10 |
-| 大型敌人预制体 | 碰撞体半径 1、高 4，`large` = true |
-| 5 种伤害类型各打一个敌人 | 生成 71 个特效物体；闪白生效；压扁到 (1.31, 0.69, 1.31) |
-| 玩家挨打 | 镜头偏移 0.364 格 |
-| 1.2 秒后 | 闪白清除、缩放复原、镜头归位、特效物体全部消失、时间缩放 1 |
-| 顿帧 | 受击当帧时间缩放 0.05，下一帧仍是 0.05，结束后回到 1 |
-| 美术版截图（带界面） | 地板暗、武器标签在贴图上方、横幅有底，文字都看得清 |
+| Supply counts | Waves 1 / 2 / 3 = 3 / 5 / 8, cap 12, 3 on the ground at start |
+| Punch with two enemies in range | Only the nearer one is selected |
+| Full Charge Swing with one enemy at 3 units and one at 4 | The one at 3 units dies, the one at 4 keeps HP 10/10 |
+| Large enemy prefab | Collider radius 1, height 4, `large` = true |
+| Each of the 5 damage types on one enemy | 71 effect objects created; flash applied; squashed to (1.31, 0.69, 1.31) |
+| Player hit | Camera offset 0.364 units |
+| After 1.2 s | Flash cleared, scale restored, camera back in place, all effect objects gone, time scale 1 |
+| Hit stop | Time scale 0.05 on the hit frame, still 0.05 on the next frame, back to 1 afterwards |
+| Illustrated-mode screenshot (with UI) | Floor is dark, weapon labels are above the textures, the banner has backing, all text is readable |
 
-## v0.7 已验证（Unity 6000.6.3f1 编辑器，脚本驱动的 Play 模式）
+## v0.7 verified (Unity 6000.6.3f1 editor, Play mode driven by script)
 
-| 项目 | 结果 |
+| Item | Result |
 |---|---|
-| 敌人从 4 格外走近，何时开始蓄力 | 边缘距离 0.30（= triggerRange） |
-| 玩家不动 | HP 50 → 45（小型敌人伤害 5） |
-| 蓄力 0.2 秒后玩家走开 1.8 格 | HP 50 → 50，没打中 |
-| 枪轻点，敌人在 4.5 格外 | 敌人 HP 10/10，打不到 |
-| 枪蓄力中 | 移速倍率 0.4；1.2 秒后蓄力 1.00 |
-| 蓄满挥出，敌人在 4.5 格外 | 敌人死亡（伤害 15） |
-| 飞刀 | 0.4 秒后飞到 7.9 格外（独立飞行物） |
-| 钩子 | 钩住 6 格外的敌人，进入 Hooked，玩家持有掩体 |
-| 美术版切换 | 地板换成沙地贴图；第 1 波正常刷怪，敌人都是立牌；Console 无错误 |
+| Enemy approaching from 4 units away: when it starts winding up | Edge distance 0.30 (= triggerRange) |
+| Player stands still | HP 50 → 45 (small enemy damage 5) |
+| Player walks 1.8 units away 0.2 s into the wind-up | HP 50 → 50, missed |
+| Gun tap, enemy 4.5 units away | Enemy HP 10/10, out of reach |
+| While charging the gun | Move speed multiplier 0.4; charge 1.00 after 1.2 s |
+| Full charge swing, enemy 4.5 units away | Enemy dies (damage 15) |
+| Throwing knife | 7.9 units away after 0.4 s (independent projectile) |
+| Hook | Hooks an enemy 6 units away, it enters Hooked, the player holds cover |
+| Illustrated switch | Floor changes to the sand texture; wave 1 spawns normally and all enemies are billboards; no errors in the Console |
 
-**没验证**：WebGL 构建和浏览器里的表现；菜单 1（完整重建场景）在 v0.7 代码下没有重新跑过，只跑了菜单 3。
+**Not verified**: the WebGL build and its behavior in a browser; menu 1 (full scene rebuild) was not rerun on the v0.7 code, only menu 3.
 
-## 规格没写死、这里先这么做的地方
+## Where the spec was open, and what is done for now
 
-| 项目 | 现在的做法 |
+| Item | Current behavior |
 |---|---|
-| 玩家移动速度 | 6 格/秒（小型敌人 5.4，大型 3.6） |
-| 导弹随机方向 | 完全 360° 随机；`MissileHoming.asset` 的 `Random Spread Degrees` 可改成瞄准方向左右一定角度 |
-| 清掉飞行物 | 只在玩家死亡或胜利时清；切波不清（按新要求） |
-| 反向射击的后坐力撞墙 | 算“推开”，不扣墙伤 |
-| 钩子把大型敌人扔出去 | 也是 8 格（体型系数只影响“被撞飞”） |
-| 保护期间挨打 | 伤害和撞飞一起无效 |
-| 敌人自己走路 | 不会主动走下缺口，只有被撞飞 / 被扔才会掉 |
-| 开局 | 标题画面点 START 或按空格开始（网页里需要先点一下获得焦点）；点击画面其他地方不会开局，避免点美术切换按钮时误开局；按 R 重开跳过标题，直接从第 1 波开始 |
-| 界面语言 | 英文，Unity 自带字体 |
-| 美术版 | 标题画面切换；默认白盒 |
-| 补给 | 每波开始时 3 / 5 / 8 把（上限 12）+ 大型敌人 50% 掉落；没有定时补给 |
-| 场地 | 不规则 13 边形（`ArenaShape`），3 个大缺口 + 2 个 1.6 格的小缺口 |
-| 近战 | 出拳、蓄力挥砍、敌人挥拳都只打一个目标 |
+| Player move speed | 6 units/s (small enemy 5.4, large 3.6) |
+| Missile random direction | Fully random over 360°; `Random Spread Degrees` in `MissileHoming.asset` can limit it to an angle either side of the aim direction |
+| Clearing projectiles | Only on player death or victory; not on wave change (per the new requirement) |
+| Reverse Shot recoil into a wall | Counts as a push; no wall damage |
+| Hook throwing a large enemy | Also 8 units (the body-size factor only affects knockback) |
+| Being hit during protection | Damage and knockback are both ignored |
+| Enemies walking on their own | Never walk into a gap; they only fall when knocked back / thrown |
+| Game start | Click START or press Space on the title screen (in a browser, click once first for focus); clicking elsewhere does not start the game, so clicking the art toggle does not start it by accident; restarting with R skips the title and starts from wave 1 |
+| UI language | English, Unity's built-in font |
+| Illustrated mode | Switched on the title screen; whitebox by default |
+| Supply | 3 / 5 / 8 weapons at the start of each wave (cap 12) + 50% large-enemy drop; no timed supply |
+| Arena | Irregular 13-sided polygon (`ArenaShape`), 3 large gaps + 2 small 1.6-unit gaps |
+| Melee | Punch, Charge Swing and enemy punch each hit a single target |
