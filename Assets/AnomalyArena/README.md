@@ -9,7 +9,7 @@ Running it again overwrites the scene and prefabs; value assets in `Effects/` th
 
 Menu **Anomaly Arena → 2. Build WebGL**: outputs to `Builds/WebGL/` in the project root.
 
-Menu **Anomaly Arena → 3. Update Existing Scene**: does not rebuild the scene; it only refreshes the English names / descriptions of the effects, generates `Art/ArtSet.asset` and assigns it to the GameManager, switches the enemy prefabs to the close-range punch values, shrinks the large enemy to twice the small one, and sets weapon supply to 3 / 5 / 8 per wave (cap 12).
+Menu **Anomaly Arena → 3. Update Existing Scene**: does not rebuild the scene; it only refreshes the English names / descriptions of the effects, generates `Art/ArtSet.asset` and assigns it to the GameManager, switches the enemy prefabs to the close-range punch values, shrinks the large enemy to twice the small one, and sets weapon supply to 3 / 4 / 5 per wave (cap 6).
 
 ## Folders
 
@@ -241,6 +241,6 @@ Version 1.0.0 (`ArenaSetup.Version` → PlayerSettings.bundleVersion, shown in t
 | Game start | Click START or press Space on the title screen (in a browser, click once first for focus); clicking elsewhere does not start the game, so clicking the art toggle does not start it by accident; restarting with R skips the title and starts from wave 1 |
 | UI language | English, Unity's built-in font |
 | Illustrated mode | Switched on the title screen; whitebox by default |
-| Supply | 3 / 5 / 8 weapons at the start of each wave (cap 12) + 50% large-enemy drop; no timed supply |
+| Supply | 3 / 4 / 5 weapons at the start of each wave (cap 6) + 50% large-enemy drop; no timed supply |
 | Arena | Irregular 13-sided polygon (`ArenaShape`), 3 large gaps + 2 small 1.6-unit gaps |
 | Melee | Punch, Charge Swing and enemy punch each hit a single target |
